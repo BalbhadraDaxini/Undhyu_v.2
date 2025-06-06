@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import axios from 'axios';
 import './App.css';
 
-const API_BASE_URL = process.env.REACT_APP_BACKEND_URL || 'https://undhyu-backend.up.railway.app';
+const API_BASE_URL = process.env.REACT_APP_BACKEND_URL || 'https://c13e2433-9270-4f3d-befd-9404fe8b16ae.preview.emergentagent.com';
 
 function App() {
   const [products, setProducts] = useState([]);
