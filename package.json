@@ -1,0 +1,16 @@
+{
+  "name": "undhyu-ecommerce",
+  "version": "1.0.0",
+  "description": "Undhyu.com - Authentic Indian Fashion Ecommerce",
+  "main": "index.js",
+  "scripts": {
+    "dev": "concurrently \"npm run backend\" \"npm run frontend\"",
+    "backend": "cd backend && python server.py",
+    "frontend": "cd frontend && npm start",
+    "build": "cd frontend && npm run build",
+    "install-all": "cd backend && pip install -r requirements.txt && cd ../frontend && npm install"
+  },
+  "keywords": ["ecommerce", "indian-fashion", "shopify", "react", "fastapi"],
+  "author": "Undhyu.com",
+  "license": "MIT"
+}
