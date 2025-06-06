@@ -12,25 +12,45 @@ from datetime import datetime
 import httpx
 from pydantic_settings import BaseSettings
 
+from fastapi import FastAPI, APIRouter, HTTPException, Query
+from dotenv import load_dotenv
+from starlette.middleware.cors import CORSMiddleware
+from motor.motor_asyncio import AsyncIOMotorClient
+import os
+import logging
+from pathlib import Path
+from pydantic import BaseModel, Field
+from typing import List, Optional, Dict, Any
+import uuid
+from datetime import datetime
+import httpx
+from pydantic_settings import BaseSettings
+
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
 
 # Configuration Settings
 class Settings(BaseSettings):
-    MONGO_URL: str
-    DB_NAME: str
-    SHOPIFY_STORE_DOMAIN: str
-    SHOPIFY_STOREFRONT_ACCESS_TOKEN: str
-    SHOPIFY_API_VERSION: str = "2024-01"
+    MONGO_URL: str = os.getenv("MONGO_URL", "mongodb://localhost:27017")
+    DB_NAME: str = os.getenv("DB_NAME", "undhyu_db")
+    SHOPIFY_STORE_DOMAIN: str = os.getenv("SHOPIFY_STORE_DOMAIN", "j0dktb-z1.myshopify.com")
+    SHOPIFY_STOREFRONT_ACCESS_TOKEN: str = os.getenv("SHOPIFY_STOREFRONT_ACCESS_TOKEN", "")
+    SHOPIFY_API_VERSION: str = os.getenv("SHOPIFY_API_VERSION", "2024-01")
+    PORT: int = int(os.getenv("PORT", 8001))
     
     class Config:
         env_file = ".env"
 
 settings = Settings()
 
-# MongoDB connection
-client = AsyncIOMotorClient(settings.MONGO_URL)
-db = client[settings.DB_NAME]
+# MongoDB connection with fallback
+try:
+    client = AsyncIOMotorClient(settings.MONGO_URL)
+    db = client[settings.DB_NAME]
+except Exception as e:
+    print(f"MongoDB connection failed: {e}")
+    client = None
+    db = None
 
 # Shopify Storefront API Client
 class ShopifyStorefrontClient:
