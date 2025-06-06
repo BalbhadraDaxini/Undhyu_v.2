@@ -535,4 +535,19 @@ logger = logging.getLogger(__name__)
 
 @app.on_event("shutdown")
 async def shutdown_db_client():
-    client.close()
+    if client:
+        client.close()
+
+# Add health check endpoint for deployment
+@api_router.get("/health")
+async def health_check():
+    return {
+        "status": "healthy",
+        "timestamp": datetime.utcnow(),
+        "shopify_configured": bool(settings.SHOPIFY_STOREFRONT_ACCESS_TOKEN),
+        "mongodb_connected": bool(client)
+    }
+
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run(app, host="0.0.0.0", port=settings.PORT)
