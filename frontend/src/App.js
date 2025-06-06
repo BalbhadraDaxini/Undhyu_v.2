@@ -16,21 +16,21 @@ function App() {
   const [endCursor, setEndCursor] = useState('');
   const [currentView, setCurrentView] = useState('home');
 
-  // Hero section images
-  const heroImages = [
+  // Memoized hero images for performance
+  const heroImages = useMemo(() => [
     {
       url: "https://images.unsplash.com/photo-1610030469983-98e550d6193c",
       alt: "Beautiful red saree with gold embellishments"
     },
     {
-      url: "https://images.unsplash.com/photo-1574847872646-abff244bbd87",
+      url: "https://images.unsplash.com/photo-1574847872646-abff244bbd87", 
       alt: "Vibrant yellow lehenga with pink dupatta"
     },
     {
       url: "https://images.unsplash.com/photo-1619715613791-89d35b51ff81",
       alt: "Elegant green lehenga with intricate embroidery"
     }
-  ];
+  ], []);
 
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
 
