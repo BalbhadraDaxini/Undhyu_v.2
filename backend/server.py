@@ -515,7 +515,13 @@ app.include_router(api_router)
 app.add_middleware(
     CORSMiddleware,
     allow_credentials=True,
-    allow_origins=["*"],
+    allow_origins=[
+        "https://undhyu.com",
+        "https://www.undhyu.com", 
+        "https://*.vercel.app",
+        "http://localhost:3000",
+        "http://localhost:3001"
+    ],
     allow_methods=["*"],
     allow_headers=["*"],
 )
