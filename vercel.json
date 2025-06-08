@@ -19,8 +19,19 @@
     }
   ],
   "functions": {
-    "frontend/src/App.js": {
+    "frontend/build/static/js/*.js": {
       "maxDuration": 30
     }
-  }
+  },
+  "headers": [
+    {
+      "source": "/api/(.*)",
+      "headers": [
+        {
+          "key": "Access-Control-Allow-Origin",
+          "value": "*"
+        }
+      ]
+    }
+  ]
 }
