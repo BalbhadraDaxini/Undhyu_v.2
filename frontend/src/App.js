@@ -547,7 +547,7 @@ function App() {
         {currentView === 'home' ? (
           <>
             <HeroSection />
-            <FeaturedCollections />
+            <FeaturedProducts />
           </>
         ) : (
           <ProductsView />
