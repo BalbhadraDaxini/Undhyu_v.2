@@ -16,23 +16,33 @@ function App() {
   const [endCursor, setEndCursor] = useState('');
   const [currentView, setCurrentView] = useState('home');
 
-  // Memoized hero images for performance
+  // Professional hero images inspired by Soch
   const heroImages = useMemo(() => [
     {
-      url: "https://images.unsplash.com/photo-1610030469983-98e550d6193c",
-      alt: "Beautiful red saree with gold embellishments"
+      url: "https://images.unsplash.com/photo-1617627143750-d86bc21e42bb",
+      alt: "Vibrant red saree with traditional jewelry"
     },
     {
-      url: "https://images.unsplash.com/photo-1574847872646-abff244bbd87", 
-      alt: "Vibrant yellow lehenga with pink dupatta"
+      url: "https://images.unsplash.com/photo-1571908599407-cdb918ed83bf",
+      alt: "Elegant cream ethnic outfit in boutique setting"
     },
     {
       url: "https://images.unsplash.com/photo-1619715613791-89d35b51ff81",
-      alt: "Elegant green lehenga with intricate embroidery"
+      alt: "Green traditional outfit with modern styling"
     }
   ], []);
 
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
+
+  // Collection categories like Soch
+  const collectionCategories = [
+    { name: 'All', handle: '', icon: '🌟' },
+    { name: 'Festive Sarees', handle: 'festive-sarees', icon: '✨' },
+    { name: 'Everyday Sarees', handle: 'everyday-sarees', icon: '👗' },
+    { name: 'Party Wear', handle: 'party-wear', icon: '🎉' },
+    { name: 'Wedding Collection', handle: 'wedding', icon: '💍' },
+    { name: 'Ready to Wear', handle: 'ready-to-wear', icon: '⚡' }
+  ];
 
   useEffect(() => {
     loadCollections();
@@ -59,7 +69,7 @@ function App() {
 
   const loadCollections = async () => {
     try {
-      const response = await axios.get(`${API_BASE_URL}/api/collections/featured`);
+      const response = await axios.get(`${API_BASE_URL}/api/collections`);
       setCollections(response.data.collections || []);
     } catch (error) {
       console.error('Error loading collections:', error);
@@ -70,7 +80,7 @@ function App() {
     setLoading(true);
     try {
       const params = {
-        first: 20,
+        first: 24, // Match Soch's 24 items per page
         collection_handle: selectedCollection || undefined,
         search_query: searchQuery || undefined,
         sort_key: sortKey,
@@ -113,55 +123,58 @@ function App() {
   const ProductCard = ({ product }) => {
     const firstImage = product.images.edges[0]?.node;
     const firstVariant = product.variants.edges[0]?.node;
+    const hasDiscount = firstVariant?.compareAtPrice;
     
     return (
       <div 
-        className="product-card group cursor-pointer transform transition-all duration-300 hover:scale-105"
+        className="product-card group cursor-pointer bg-white rounded-lg shadow-sm hover:shadow-xl transition-all duration-300 border border-gray-100"
         onClick={() => handleProductClick(product)}
       >
-        <div className="bg-white rounded-xl shadow-lg overflow-hidden border border-orange-100 hover:shadow-2xl transition-shadow duration-300">
+        <div className="relative overflow-hidden">
           {firstImage && (
-            <div className="relative overflow-hidden h-64">
+            <div className="aspect-[3/4] overflow-hidden">
               <img
                 src={firstImage.url}
                 alt={firstImage.altText || product.title}
-                className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
+                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
               />
-              <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
             </div>
           )}
           
-          <div className="p-4">
-            <h3 className="font-semibold text-lg mb-2 text-gray-800 line-clamp-2 group-hover:text-orange-600 transition-colors">
-              {product.title}
-            </h3>
-            
-            {firstVariant && (
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-xl font-bold text-orange-600">
-                  {formatPrice(firstVariant.price)}
-                </span>
-                {firstVariant.compareAtPrice && (
-                  <span className="text-sm text-gray-500 line-through">
-                    {formatPrice(firstVariant.compareAtPrice)}
-                  </span>
-                )}
-              </div>
-            )}
-            
-            <p className="text-gray-600 text-sm mb-2 font-medium">{product.vendor}</p>
-            
-            <div className="flex flex-wrap gap-1">
-              {product.tags.slice(0, 3).map((tag, index) => (
-                <span 
-                  key={index}
-                  className="bg-orange-50 text-orange-700 px-2 py-1 rounded-full text-xs border border-orange-200"
-                >
-                  {tag}
-                </span>
-              ))}
+          {hasDiscount && (
+            <div className="absolute top-3 left-3 bg-red-500 text-white px-2 py-1 rounded text-xs font-medium">
+              {Math.round(((parseFloat(firstVariant.compareAtPrice.amount) - parseFloat(firstVariant.price.amount)) / parseFloat(firstVariant.compareAtPrice.amount)) * 100)}% OFF
             </div>
+          )}
+          
+          <div className="absolute top-3 right-3 opacity-0 group-hover:opacity-100 transition-opacity">
+            <button className="p-2 bg-white rounded-full shadow-lg hover:bg-gray-50">
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
+              </svg>
+            </button>
           </div>
+        </div>
+        
+        <div className="p-4">
+          <h3 className="font-medium text-gray-800 mb-2 line-clamp-2 text-sm leading-relaxed">
+            {product.title}
+          </h3>
+          
+          {firstVariant && (
+            <div className="flex items-center gap-2 mb-2">
+              <span className="text-lg font-bold text-gray-900">
+                {formatPrice(firstVariant.price)}
+              </span>
+              {firstVariant.compareAtPrice && (
+                <span className="text-sm text-gray-500 line-through">
+                  {formatPrice(firstVariant.compareAtPrice)}
+                </span>
+              )}
+            </div>
+          )}
+          
+          <p className="text-xs text-gray-600 uppercase tracking-wide font-medium">{product.vendor}</p>
         </div>
       </div>
     );
@@ -169,29 +182,19 @@ function App() {
 
   const CollectionFilter = () => {
     return (
-      <div className="flex flex-wrap gap-2 mb-4">
-        <button
-          onClick={() => setSelectedCollection('')}
-          className={`px-4 py-2 rounded-full border transition-all duration-200 ${
-            selectedCollection === ''
-              ? 'bg-orange-600 text-white border-orange-600 shadow-lg'
-              : 'bg-white text-gray-700 border-gray-300 hover:bg-orange-50 hover:border-orange-300'
-          }`}
-        >
-          All Products
-        </button>
-        
-        {collections.map((collection) => (
+      <div className="flex flex-wrap gap-2 mb-6">
+        {collectionCategories.map((category) => (
           <button
-            key={collection.id}
-            onClick={() => setSelectedCollection(collection.handle)}
-            className={`px-4 py-2 rounded-full border transition-all duration-200 ${
-              selectedCollection === collection.handle
-                ? 'bg-orange-600 text-white border-orange-600 shadow-lg'
-                : 'bg-white text-gray-700 border-gray-300 hover:bg-orange-50 hover:border-orange-300'
+            key={category.handle}
+            onClick={() => setSelectedCollection(category.handle)}
+            className={`px-4 py-2 rounded-full text-sm font-medium transition-all duration-200 ${
+              selectedCollection === category.handle
+                ? 'bg-black text-white shadow-lg'
+                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
             }`}
           >
-            {collection.title}
+            <span className="mr-1">{category.icon}</span>
+            {category.name}
           </button>
         ))}
       </div>
@@ -200,39 +203,45 @@ function App() {
 
   const HeroSection = () => {
     return (
-      <div className="relative h-96 md:h-[500px] overflow-hidden rounded-3xl mx-4 my-8 shadow-2xl">
+      <div className="relative h-[500px] md:h-[600px] overflow-hidden bg-gradient-to-br from-pink-50 to-purple-50">
         <div className="absolute inset-0">
           <img
             src={heroImages[currentImageIndex].url}
             alt={heroImages[currentImageIndex].alt}
             className="w-full h-full object-cover transition-all duration-1000"
           />
-          <div className="absolute inset-0 bg-gradient-to-r from-black/60 via-black/30 to-transparent"></div>
+          <div className="absolute inset-0 bg-gradient-to-r from-black/40 via-black/20 to-transparent"></div>
         </div>
         
         <div className="relative z-10 h-full flex items-center">
-          <div className="max-w-4xl mx-auto px-6 text-white">
-            <h1 className="text-4xl md:text-6xl font-bold mb-4 leading-tight">
-              Welcome to <span className="text-orange-400">Undhyu</span>
-            </h1>
-            <p className="text-xl md:text-2xl mb-6 opacity-90">
-              Discover the finest collection of authentic Indian women's apparel
-            </p>
-            <p className="text-lg mb-8 opacity-80">
-              From the silk sarees of Banaras to the vibrant lehengas of Jaipur, 
-              explore traditional craftsmanship from across India
-            </p>
-            <button
-              onClick={() => setCurrentView('products')}
-              className="bg-orange-600 hover:bg-orange-700 text-white px-8 py-4 rounded-full text-lg font-semibold transition-all duration-200 transform hover:scale-105 shadow-lg"
-            >
-              Shop Collection
-            </button>
+          <div className="max-w-7xl mx-auto px-6 w-full">
+            <div className="max-w-2xl">
+              <h1 className="text-5xl md:text-7xl font-bold text-white mb-6 leading-tight">
+                Undhyu<span className="text-pink-300">.</span>
+              </h1>
+              <p className="text-xl md:text-2xl text-white/90 mb-4">
+                Explore Wide Range of Indian Sarees
+              </p>
+              <p className="text-lg text-white/80 mb-8">
+                Traditional and ready-made साड़ी, perfect for wedding, festivals, parties and special occasions
+              </p>
+              <div className="flex gap-4">
+                <button
+                  onClick={() => setCurrentView('products')}
+                  className="bg-white text-black px-8 py-4 rounded-lg font-semibold hover:bg-gray-100 transition-colors duration-200 shadow-lg"
+                >
+                  Shop Sarees
+                </button>
+                <button className="border-2 border-white text-white px-8 py-4 rounded-lg font-semibold hover:bg-white hover:text-black transition-all duration-200">
+                  View Collection
+                </button>
+              </div>
+            </div>
           </div>
         </div>
 
         {/* Image indicators */}
-        <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 flex space-x-2">
+        <div className="absolute bottom-6 left-1/2 transform -translate-x-1/2 flex space-x-2">
           {heroImages.map((_, index) => (
             <button
               key={index}
@@ -249,49 +258,58 @@ function App() {
 
   const ProductsView = () => {
     return (
-      <div className="container mx-auto px-4 py-8">
-        <h2 className="text-3xl font-bold mb-8 text-gray-800 text-center">Our Exquisite Collection</h2>
-        
-        {/* Filters */}
-        <div className="mb-8 space-y-4">
-          <CollectionFilter />
+      <div className="max-w-7xl mx-auto px-6 py-8">
+        <div className="flex justify-between items-center mb-8">
+          <div>
+            <h1 className="text-3xl font-bold text-gray-900">Sarees</h1>
+            <p className="text-gray-600 mt-1">{products.length} products found</p>
+          </div>
           
-          <div className="flex flex-wrap gap-4 items-center">
-            <input
-              type="text"
-              placeholder="Search products..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="px-4 py-2 border border-gray-300 rounded-full focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500 min-w-64"
-            />
-            
+          <div className="flex items-center gap-4">
             <select
               value={sortKey}
               onChange={(e) => setSortKey(e.target.value)}
-              className="px-4 py-2 border border-gray-300 rounded-full focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
+              className="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-black focus:border-black"
             >
-              <option value="CREATED_AT">Newest First</option>
+              <option value="CREATED_AT">What's New</option>
+              <option value="BEST_SELLING">Best Seller</option>
+              <option value="PRICE">Price - Low To High</option>
               <option value="TITLE">Name A-Z</option>
-              <option value="PRICE">Price Low-High</option>
-              <option value="BEST_SELLING">Best Selling</option>
-              <option value="RELEVANCE">Most Relevant</option>
+              <option value="RELEVANCE">Recommended</option>
             </select>
+          </div>
+        </div>
+        
+        {/* Filters */}
+        <div className="mb-8">
+          <CollectionFilter />
+          
+          <div className="flex flex-wrap gap-4 items-center">
+            <div className="flex-1 max-w-md">
+              <input
+                type="text"
+                placeholder="Search sarees..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-black focus:border-black"
+              />
+            </div>
             
             <div className="flex gap-2 items-center">
               <input
                 type="number"
-                placeholder="Min Price"
+                placeholder="Min ₹"
                 value={priceRange.min}
                 onChange={(e) => setPriceRange(prev => ({ ...prev, min: e.target.value }))}
-                className="px-3 py-2 border border-gray-300 rounded-full focus:outline-none focus:ring-2 focus:ring-orange-500 w-24"
+                className="w-24 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-black text-sm"
               />
-              <span>-</span>
+              <span className="text-gray-500">-</span>
               <input
                 type="number"
-                placeholder="Max Price"
+                placeholder="Max ₹"
                 value={priceRange.max}
                 onChange={(e) => setPriceRange(prev => ({ ...prev, max: e.target.value }))}
-                className="px-3 py-2 border border-gray-300 rounded-full focus:outline-none focus:ring-2 focus:ring-orange-500 w-24"
+                className="w-24 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-black text-sm"
               />
             </div>
           </div>
@@ -300,12 +318,12 @@ function App() {
         {/* Products Grid */}
         {loading && products.length === 0 ? (
           <div className="text-center py-16">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-orange-600 mx-auto mb-4"></div>
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-black mx-auto mb-4"></div>
             <p className="text-gray-600">Loading beautiful collections...</p>
           </div>
         ) : (
           <>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-4 md:gap-6">
               {products.map((product) => (
                 <ProductCard key={product.id} product={product} />
               ))}
@@ -316,9 +334,9 @@ function App() {
                 <button
                   onClick={handleLoadMore}
                   disabled={loading}
-                  className="px-8 py-3 bg-orange-600 text-white rounded-full hover:bg-orange-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 font-semibold"
+                  className="px-8 py-3 border-2 border-black text-black rounded-lg hover:bg-black hover:text-white disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 font-semibold"
                 >
-                  {loading ? 'Loading...' : 'Load More Products'}
+                  {loading ? 'Loading...' : 'Load More'}
                 </button>
               </div>
             )}
@@ -326,124 +344,62 @@ function App() {
         )}
 
         {products.length === 0 && !loading && (
-          <div className="text-center py-16 text-gray-500">
-            <div className="text-6xl mb-4">🔍</div>
-            <p className="text-xl">No products found</p>
-            <p>Try adjusting your filters or search terms</p>
+          <div className="text-center py-16">
+            <div className="text-6xl mb-4">👗</div>
+            <h3 className="text-xl font-semibold mb-2">No products found</h3>
+            <p className="text-gray-600">Try adjusting your filters or search terms</p>
           </div>
         )}
       </div>
     );
   };
 
-  const AboutSection = () => {
+  const FeaturedCollections = () => {
+    const featuredImages = [
+      {
+        url: "https://images.unsplash.com/photo-1571587289339-cb7da03fb5a6",
+        title: "Wedding Collection",
+        subtitle: "Exquisite designs for your special day"
+      },
+      {
+        url: "https://images.pexels.com/photos/32451616/pexels-photo-32451616.jpeg", 
+        title: "Festive Sarees",
+        subtitle: "Celebrate in style"
+      },
+      {
+        url: "https://images.unsplash.com/photo-1616583936499-d4116e7e2e76",
+        title: "Everyday Elegance",
+        subtitle: "Comfort meets sophistication"
+      }
+    ];
+
     return (
-      <div className="py-16 bg-gradient-to-br from-orange-50 to-red-50">
-        <div className="container mx-auto px-4">
+      <div className="py-16 bg-gray-50">
+        <div className="max-w-7xl mx-auto px-6">
           <div className="text-center mb-12">
-            <h2 className="text-4xl font-bold text-gray-800 mb-4">Crafted Across India</h2>
-            <p className="text-xl text-gray-600 max-w-3xl mx-auto">
-              Undhyu brings you authentic Indian fashion from the most celebrated regions, 
-              where tradition meets contemporary elegance.
+            <h2 className="text-4xl font-bold text-gray-900 mb-4">Featured Collections</h2>
+            <p className="text-xl text-gray-600 max-w-2xl mx-auto">
+              Discover our curated selection of the finest Indian ethnic wear
             </p>
           </div>
 
           <div className="grid md:grid-cols-3 gap-8">
-            <div className="text-center">
-              <div className="w-16 h-16 bg-orange-600 rounded-full flex items-center justify-center mx-auto mb-4">
-                <span className="text-2xl text-white">🕌</span>
-              </div>
-              <h3 className="text-xl font-semibold mb-2">Banaras Silk</h3>
-              <p className="text-gray-600">Timeless silk sarees woven with golden threads, representing centuries of craftsmanship</p>
-            </div>
-            
-            <div className="text-center">
-              <div className="w-16 h-16 bg-pink-600 rounded-full flex items-center justify-center mx-auto mb-4">
-                <span className="text-2xl text-white">👑</span>
-              </div>
-              <h3 className="text-xl font-semibold mb-2">Jaipur Royalty</h3>
-              <p className="text-gray-600">Regal lehengas and suits inspired by Rajasthani royal heritage and vibrant culture</p>
-            </div>
-            
-            <div className="text-center">
-              <div className="w-16 h-16 bg-green-600 rounded-full flex items-center justify-center mx-auto mb-4">
-                <span className="text-2xl text-white">🎨</span>
-              </div>
-              <h3 className="text-xl font-semibold mb-2">Gujarat Artistry</h3>
-              <p className="text-gray-600">Intricate bandhani work and mirror embellishments showcasing Gujarat's rich textile tradition</p>
-            </div>
-          </div>
-        </div>
-      </div>
-    );
-  };
-
-  const ContactSection = () => {
-    return (
-      <div className="py-16 bg-gray-900 text-white">
-        <div className="container mx-auto px-4">
-          <div className="grid md:grid-cols-2 gap-12">
-            <div>
-              <h2 className="text-3xl font-bold mb-6">Get in Touch</h2>
-              <p className="text-gray-300 mb-6">
-                Have questions about our products or need styling advice? 
-                Our team is here to help you find the perfect outfit.
-              </p>
-              
-              <div className="space-y-4">
-                <div className="flex items-center">
-                  <span className="w-6 h-6 bg-orange-600 rounded-full flex items-center justify-center mr-3">
-                    📧
-                  </span>
-                  <span>contact@undhyu.com</span>
-                </div>
-                <div className="flex items-center">
-                  <span className="w-6 h-6 bg-orange-600 rounded-full flex items-center justify-center mr-3">
-                    📱
-                  </span>
-                  <span>+91 98765 43210</span>
-                </div>
-                <div className="flex items-center">
-                  <span className="w-6 h-6 bg-orange-600 rounded-full flex items-center justify-center mr-3">
-                    🌐
-                  </span>
-                  <span>www.undhyu.com</span>
+            {featuredImages.map((item, index) => (
+              <div key={index} className="group cursor-pointer">
+                <div className="relative overflow-hidden rounded-2xl">
+                  <img
+                    src={item.url}
+                    alt={item.title}
+                    className="w-full h-80 object-cover group-hover:scale-105 transition-transform duration-500"
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent"></div>
+                  <div className="absolute bottom-6 left-6 text-white">
+                    <h3 className="text-2xl font-bold mb-2">{item.title}</h3>
+                    <p className="text-white/90">{item.subtitle}</p>
+                  </div>
                 </div>
               </div>
-            </div>
-            
-            <div>
-              <h2 className="text-3xl font-bold mb-6">Sell With Us</h2>
-              <p className="text-gray-300 mb-6">
-                Are you a craftsperson or designer? Join our platform to showcase 
-                your authentic Indian fashion to customers worldwide.
-              </p>
-              
-              <div className="space-y-4">
-                <div className="flex items-start">
-                  <span className="w-6 h-6 bg-orange-600 rounded-full flex items-center justify-center mr-3 mt-1">
-                    ✨
-                  </span>
-                  <span>Showcase your authentic designs</span>
-                </div>
-                <div className="flex items-start">
-                  <span className="w-6 h-6 bg-orange-600 rounded-full flex items-center justify-center mr-3 mt-1">
-                    🤝
-                  </span>
-                  <span>Partner with established artisans</span>
-                </div>
-                <div className="flex items-start">
-                  <span className="w-6 h-6 bg-orange-600 rounded-full flex items-center justify-center mr-3 mt-1">
-                    📈
-                  </span>
-                  <span>Grow your business nationwide</span>
-                </div>
-              </div>
-              
-              <button className="mt-6 bg-orange-600 hover:bg-orange-700 text-white px-6 py-3 rounded-full transition-colors duration-200">
-                Become a Partner
-              </button>
-            </div>
+            ))}
           </div>
         </div>
       </div>
@@ -451,40 +407,63 @@ function App() {
   };
 
   return (
-    <div className="App min-h-screen bg-gradient-to-br from-orange-50 via-white to-red-50">
+    <div className="App min-h-screen bg-white">
       {/* Header */}
-      <header className="bg-white shadow-lg border-b-2 border-orange-100">
-        <div className="container mx-auto px-4 py-4">
-          <div className="flex items-center justify-between">
+      <header className="bg-white shadow-sm border-b">
+        <div className="max-w-7xl mx-auto px-6">
+          <div className="flex items-center justify-between h-16">
             <div className="flex items-center">
-              <h1 className="text-3xl font-bold text-gray-900">
-                <span className="text-orange-600">Undhyu</span>.com
+              <h1 className="text-2xl font-bold text-gray-900">
+                Undhyu<span className="text-pink-500">.</span>
               </h1>
-              <span className="ml-2 text-sm text-gray-600 italic">Authentic Indian Fashion</span>
             </div>
             
-            <nav className="flex space-x-6">
+            <nav className="hidden md:flex space-x-8">
               <button
                 onClick={() => setCurrentView('home')}
-                className={`px-4 py-2 rounded-full transition-colors duration-200 ${
+                className={`text-sm font-medium transition-colors duration-200 ${
                   currentView === 'home' 
-                    ? 'bg-orange-600 text-white' 
-                    : 'text-gray-700 hover:text-orange-600'
+                    ? 'text-black border-b-2 border-black pb-1' 
+                    : 'text-gray-700 hover:text-black'
                 }`}
               >
                 Home
               </button>
               <button
                 onClick={() => setCurrentView('products')}
-                className={`px-4 py-2 rounded-full transition-colors duration-200 ${
+                className={`text-sm font-medium transition-colors duration-200 ${
                   currentView === 'products' 
-                    ? 'bg-orange-600 text-white' 
-                    : 'text-gray-700 hover:text-orange-600'
+                    ? 'text-black border-b-2 border-black pb-1' 
+                    : 'text-gray-700 hover:text-black'
                 }`}
               >
-                Shop
+                Sarees
+              </button>
+              <button className="text-sm font-medium text-gray-700 hover:text-black transition-colors duration-200">
+                Collections
+              </button>
+              <button className="text-sm font-medium text-gray-700 hover:text-black transition-colors duration-200">
+                New Arrivals
               </button>
             </nav>
+
+            <div className="flex items-center space-x-4">
+              <button className="p-2 text-gray-700 hover:text-black">
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                </svg>
+              </button>
+              <button className="p-2 text-gray-700 hover:text-black">
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                </svg>
+              </button>
+              <button className="p-2 text-gray-700 hover:text-black">
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 3h2l.4 2M7 13h10l4-8H5.4m0 0L7 13m0 0l-2.5 5M7 13l2.5 5m6-5v6a2 2 0 01-2 2H9a2 2 0 01-2-2v-6m8 0V9a2 2 0 00-2-2H9a2 2 0 00-2 2v4.01" />
+                </svg>
+              </button>
+            </div>
           </div>
         </div>
       </header>
@@ -494,8 +473,7 @@ function App() {
         {currentView === 'home' ? (
           <>
             <HeroSection />
-            <AboutSection />
-            <ContactSection />
+            <FeaturedCollections />
           </>
         ) : (
           <ProductsView />
@@ -503,10 +481,50 @@ function App() {
       </main>
       
       {/* Footer */}
-      <footer className="bg-gray-100 border-t-2 border-orange-100">
-        <div className="container mx-auto px-4 py-8 text-center text-gray-600">
-          <p className="mb-2">&copy; 2025 Undhyu.com - Authentic Indian Fashion. All rights reserved.</p>
-          <p className="text-sm">Bringing you the finest collection from Jaipur, Banaras, Gujarat and beyond</p>
+      <footer className="bg-gray-900 text-white py-12">
+        <div className="max-w-7xl mx-auto px-6">
+          <div className="grid md:grid-cols-4 gap-8">
+            <div>
+              <h3 className="text-lg font-bold mb-4">Undhyu.</h3>
+              <p className="text-gray-400 text-sm leading-relaxed">
+                Your destination for authentic Indian ethnic wear. 
+                Explore our collection of sarees, suits, and traditional clothing.
+              </p>
+            </div>
+            
+            <div>
+              <h4 className="font-semibold mb-4">Quick Links</h4>
+              <ul className="space-y-2 text-sm text-gray-400">
+                <li><a href="#" className="hover:text-white transition-colors">About Us</a></li>
+                <li><a href="#" className="hover:text-white transition-colors">Size Guide</a></li>
+                <li><a href="#" className="hover:text-white transition-colors">Shipping Info</a></li>
+                <li><a href="#" className="hover:text-white transition-colors">Returns</a></li>
+              </ul>
+            </div>
+            
+            <div>
+              <h4 className="font-semibold mb-4">Customer Care</h4>
+              <ul className="space-y-2 text-sm text-gray-400">
+                <li><a href="#" className="hover:text-white transition-colors">Contact Us</a></li>
+                <li><a href="#" className="hover:text-white transition-colors">Track Order</a></li>
+                <li><a href="#" className="hover:text-white transition-colors">Bulk Orders</a></li>
+                <li><a href="#" className="hover:text-white transition-colors">Sell With Us</a></li>
+              </ul>
+            </div>
+            
+            <div>
+              <h4 className="font-semibold mb-4">Connect</h4>
+              <ul className="space-y-2 text-sm text-gray-400">
+                <li>📧 contact@undhyu.com</li>
+                <li>📱 +91 98765 43210</li>
+                <li>🌐 www.undhyu.com</li>
+              </ul>
+            </div>
+          </div>
+          
+          <div className="border-t border-gray-800 mt-8 pt-8 text-center text-sm text-gray-400">
+            <p>&copy; 2025 Undhyu.com - All rights reserved. Crafted with ❤️ for Indian fashion lovers.</p>
+          </div>
         </div>
       </footer>
     </div>
