@@ -354,7 +354,81 @@ function App() {
     );
   };
 
-  const FeaturedCollections = () => {
+  const FeaturedProducts = () => {
+    const [featuredProducts, setFeaturedProducts] = useState([]);
+    const [loadingFeatured, setLoadingFeatured] = useState(true);
+
+    useEffect(() => {
+      loadFeaturedProducts();
+    }, []);
+
+    const loadFeaturedProducts = async () => {
+      setLoadingFeatured(true);
+      try {
+        const response = await axios.get(`${API_BASE_URL}/api/products`, { 
+          params: { 
+            first: 8, // Show 8 products on homepage
+            sort_key: 'BEST_SELLING' 
+          } 
+        });
+        setFeaturedProducts(response.data.products || []);
+      } catch (error) {
+        console.error('Error loading featured products:', error);
+      } finally {
+        setLoadingFeatured(false);
+      }
+    };
+
+    return (
+      <div className="py-16 bg-white">
+        <div className="max-w-7xl mx-auto px-6">
+          <div className="text-center mb-12">
+            <h2 className="text-4xl font-bold text-gray-900 mb-4">Trending Now</h2>
+            <p className="text-xl text-gray-600 max-w-2xl mx-auto">
+              Discover our most popular sarees and ethnic wear loved by customers
+            </p>
+          </div>
+
+          {loadingFeatured ? (
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-6">
+              {[...Array(8)].map((_, index) => (
+                <div key={index} className="animate-pulse">
+                  <div className="bg-gray-200 aspect-[3/4] rounded-lg mb-4"></div>
+                  <div className="h-4 bg-gray-200 rounded mb-2"></div>
+                  <div className="h-4 bg-gray-200 rounded w-3/4"></div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <>
+              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-6">
+                {featuredProducts.map((product) => (
+                  <ProductCard key={product.id} product={product} />
+                ))}
+              </div>
+
+              <div className="text-center mt-12">
+                <button
+                  onClick={() => setCurrentView('products')}
+                  className="bg-black text-white px-8 py-4 rounded-lg font-semibold hover:bg-gray-800 transition-all duration-200 shadow-lg"
+                >
+                  View All Products
+                </button>
+              </div>
+            </>
+          )}
+
+          {featuredProducts.length === 0 && !loadingFeatured && (
+            <div className="text-center py-16">
+              <div className="text-6xl mb-4">👗</div>
+              <h3 className="text-xl font-semibold mb-2">No featured products yet</h3>
+              <p className="text-gray-600">Add some products to your Shopify store to see them here</p>
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  };
     const featuredImages = [
       {
         url: "https://images.unsplash.com/photo-1571587289339-cb7da03fb5a6",
