@@ -429,55 +429,6 @@ function App() {
       </div>
     );
   };
-    const featuredImages = [
-      {
-        url: "https://images.unsplash.com/photo-1571587289339-cb7da03fb5a6",
-        title: "Wedding Collection",
-        subtitle: "Exquisite designs for your special day"
-      },
-      {
-        url: "https://images.pexels.com/photos/32451616/pexels-photo-32451616.jpeg", 
-        title: "Festive Sarees",
-        subtitle: "Celebrate in style"
-      },
-      {
-        url: "https://images.unsplash.com/photo-1616583936499-d4116e7e2e76",
-        title: "Everyday Elegance",
-        subtitle: "Comfort meets sophistication"
-      }
-    ];
-
-    return (
-      <div className="py-16 bg-gray-50">
-        <div className="max-w-7xl mx-auto px-6">
-          <div className="text-center mb-12">
-            <h2 className="text-4xl font-bold text-gray-900 mb-4">Featured Collections</h2>
-            <p className="text-xl text-gray-600 max-w-2xl mx-auto">
-              Discover our curated selection of the finest Indian ethnic wear
-            </p>
-          </div>
-
-          <div className="grid md:grid-cols-3 gap-8">
-            {featuredImages.map((item, index) => (
-              <div key={index} className="group cursor-pointer">
-                <div className="relative overflow-hidden rounded-2xl">
-                  <img
-                    src={item.url}
-                    alt={item.title}
-                    className="w-full h-80 object-cover group-hover:scale-105 transition-transform duration-500"
-                  />
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent"></div>
-                  <div className="absolute bottom-6 left-6 text-white">
-                    <h3 className="text-2xl font-bold mb-2">{item.title}</h3>
-                    <p className="text-white/90">{item.subtitle}</p>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </div>
-    );
   };
 
   return (
