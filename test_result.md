@@ -101,3 +101,99 @@
 #====================================================================================================
 # Testing Data - Main Agent and testing sub agent both should log testing data below this section
 #====================================================================================================
+
+## user_problem_statement: "Undhyu.com e-commerce website for female apparel with Shopify integration is experiencing cart checkout failures via Razorpay payment gateway. The 405 error occurs when attempting to create Razorpay orders, while individual product purchases work but show static payment screens. Need to fix payment integration while preserving original UI design."
+
+## backend:
+  - task: "Razorpay Order Creation API"
+    implemented: false
+    working: false
+    file: "backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+        - working: false
+          agent: "main"
+          comment: "Endpoint /api/create-razorpay-order completely missing from backend. No Razorpay integration exists."
+
+  - task: "Razorpay Payment Verification API"
+    implemented: false
+    working: false
+    file: "backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+        - working: false
+          agent: "main"
+          comment: "Endpoint /api/verify-payment completely missing from backend. No payment verification logic exists."
+
+  - task: "Shopify Admin API Integration"
+    implemented: false
+    working: false
+    file: "backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+        - working: false
+          agent: "main"
+          comment: "No Shopify Admin API integration to create orders after successful payment. Only Storefront API is implemented."
+
+  - task: "Environment Configuration"
+    implemented: false
+    working: false
+    file: "backend/.env"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+        - working: false
+          agent: "main"
+          comment: "Missing Razorpay API keys in environment configuration. No payment gateway credentials configured."
+
+## frontend:
+  - task: "Cart Functionality"
+    implemented: false
+    working: false
+    file: "frontend/src/App.js"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+        - working: false
+          agent: "main"
+          comment: "Cart functionality completely missing. No add to cart, cart display, or checkout logic exists."
+
+  - task: "Razorpay Payment Integration"
+    implemented: false
+    working: false
+    file: "frontend/src/App.js"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+        - working: false
+          agent: "main"
+          comment: "No Razorpay SDK integration or payment processing logic in frontend."
+
+## metadata:
+  created_by: "main_agent"
+  version: "1.0"
+  test_sequence: 0
+  run_ui: false
+
+## test_plan:
+  current_focus:
+    - "Razorpay Order Creation API"
+    - "Razorpay Payment Verification API"
+    - "Cart Functionality"
+    - "Environment Configuration"
+  stuck_tasks: []
+  test_all: false
+  test_priority: "high_first"
+
+## agent_communication:
+    - agent: "main"
+      message: "Analyzed GitHub repository and identified complete absence of payment functionality. Need to implement full Razorpay integration from scratch including backend APIs, frontend cart system, and payment processing. Current 405 error is due to missing endpoints entirely."
