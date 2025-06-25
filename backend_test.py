@@ -5,7 +5,7 @@ import json
 from datetime import datetime
 
 class UndhyuAPITester:
-    def __init__(self, base_url="https://c13e2433-9270-4f3d-befd-9404fe8b16ae.preview.emergentagent.com"):
+    def __init__(self, base_url="https://7a93d17b-e192-4382-9350-73b0bd81f98b.preview.emergentagent.com"):
         self.base_url = base_url
         self.tests_run = 0
         self.tests_passed = 0
