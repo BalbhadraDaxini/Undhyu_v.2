@@ -536,18 +536,15 @@ function App() {
     const loadFeaturedProducts = async () => {
       setLoadingFeatured(true);
       try {
-        console.log('Loading featured products from:', `${API_BASE_URL}/api/products`);
         const response = await axios.get(`${API_BASE_URL}/api/products`, { 
           params: { 
             first: 8, // Show 8 products on homepage
             sort_key: 'BEST_SELLING' 
           } 
         });
-        console.log('Featured products response:', response.data);
         setFeaturedProducts(response.data.products || []);
       } catch (error) {
         console.error('Error loading featured products:', error);
-        console.error('Error details:', error.response?.data || error.message);
       } finally {
         setLoadingFeatured(false);
       }
