@@ -187,22 +187,51 @@ function App() {
     return cart.reduce((total, item) => total + item.quantity, 0);
   };
 
-  const processPayment = async (customerInfo = {}) => {
-    if (cart.length === 0) {
+  const processPayment = async (customerInfo = {}, quickBuyCart = null) => {
+    const cartToUse = quickBuyCart || cart;
+    
+    if (cartToUse.length === 0) {
       alert('Your cart is empty');
       return;
+    }
+
+    // If no customer info provided, collect it first
+    if (!customerInfo.email) {
+      const email = prompt('Please enter your email address:');
+      const phone = prompt('Please enter your phone number:');
+      const name = prompt('Please enter your full name:');
+      const address = prompt('Please enter your delivery address:');
+      const city = prompt('Please enter your city:');
+      const pincode = prompt('Please enter your pincode:');
+      
+      if (!email || !phone || !name || !address || !city || !pincode) {
+        alert('Please provide all required details to proceed with payment.');
+        return;
+      }
+      
+      customerInfo = {
+        email,
+        phone,
+        first_name: name.split(' ')[0] || name,
+        last_name: name.split(' ').slice(1).join(' ') || '',
+        address,
+        city,
+        pincode,
+        state: '',
+        country: 'India'
+      };
     }
 
     setPaymentLoading(true);
 
     try {
-      const totalAmount = Math.round(getCartTotal() * 100); // Convert to paise
+      const totalAmount = Math.round(cartToUse.reduce((total, item) => total + (item.price * item.quantity), 0) * 100); // Convert to paise
 
       // Create Razorpay order
       const orderResponse = await axios.post(`${API_BASE_URL}/api/create-razorpay-order`, {
         amount: totalAmount,
         currency: 'INR',
-        cart: cart,
+        cart: cartToUse,
         customer_info: customerInfo
       });
 
@@ -218,33 +247,36 @@ function App() {
         order_id: order_id,
         handler: async function (response) {
           try {
+            setPaymentLoading(true);
             // Verify payment
             const verifyResponse = await axios.post(`${API_BASE_URL}/api/verify-payment`, {
               razorpay_order_id: response.razorpay_order_id,
               razorpay_payment_id: response.razorpay_payment_id,
               razorpay_signature: response.razorpay_signature,
-              cart: cart,
+              cart: cartToUse,
               customer_info: customerInfo
             });
 
             if (verifyResponse.data.success) {
-              alert('Payment successful! Your order has been placed.');
+              alert('🎉 Payment successful! Your order has been placed and will appear in your Shopify admin.');
               setCart([]); // Clear cart
               setShowCart(false);
+              // Redirect to a success page or refresh
+              window.location.reload();
             } else {
-              alert('Payment verification failed. Please contact support.');
+              alert('❌ Payment verification failed. Please contact support with your payment ID: ' + response.razorpay_payment_id);
             }
           } catch (error) {
             console.error('Payment verification error:', error);
-            alert('Payment verification failed. Please contact support.');
+            alert('❌ Payment verification failed. Please contact support with your payment ID: ' + response.razorpay_payment_id);
           } finally {
             setPaymentLoading(false);
           }
         },
         prefill: {
-          name: customerInfo.first_name || '',
-          email: customerInfo.email || '',
-          contact: customerInfo.phone || ''
+          name: customerInfo.first_name + ' ' + customerInfo.last_name,
+          email: customerInfo.email,
+          contact: customerInfo.phone
         },
         theme: {
           color: '#000000'
@@ -252,16 +284,23 @@ function App() {
         modal: {
           ondismiss: function() {
             setPaymentLoading(false);
+            alert('Payment cancelled. You can try again anytime.');
           }
         }
       };
 
       const rzp = new window.Razorpay(options);
+      
+      rzp.on('payment.failed', function (response) {
+        setPaymentLoading(false);
+        alert('❌ Payment failed: ' + response.error.description);
+      });
+      
       rzp.open();
 
     } catch (error) {
       console.error('Payment initiation error:', error);
-      alert('Failed to initiate payment. Please try again.');
+      alert('❌ Failed to initiate payment. Please try again.');
       setPaymentLoading(false);
     }
   };
