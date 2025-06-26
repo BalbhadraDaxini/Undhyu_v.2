@@ -107,7 +107,7 @@ function App() {
     } catch (error) {
       console.error('Error loading collections:', error);
     }
-  };
+  }
 
   const loadProducts = async (loadMore = false) => {
     setLoading(true);
@@ -137,7 +137,7 @@ function App() {
     } finally {
       setLoading(false);
     }
-  };
+  }
 
   const addToCart = (product) => {
     const firstVariant = product.variants.edges[0]?.node;
@@ -173,11 +173,11 @@ function App() {
     // Show cart briefly
     setShowCart(true);
     setTimeout(() => setShowCart(false), 2000);
-  };
+  }
 
   const removeFromCart = (productId) => {
     setCart(prevCart => prevCart.filter(item => item.id !== productId));
-  };
+  }
 
   const updateCartQuantity = (productId, quantity) => {
     if (quantity <= 0) {
@@ -190,15 +190,15 @@ function App() {
         item.id === productId ? { ...item, quantity } : item
       )
     );
-  };
+  }
 
   const getCartTotal = () => {
     return cart.reduce((total, item) => total + (item.price * item.quantity), 0);
-  };
+  }
 
   const getCartCount = () => {
     return cart.reduce((total, item) => total + item.quantity, 0);
-  };
+  }
 
   const processPayment = async (quickBuyCart = null) => {
     const cartToUse = quickBuyCart || cart;
@@ -211,7 +211,7 @@ function App() {
     // Store the cart to use and show customer form
     setPendingCart(cartToUse);
     setShowCustomerForm(true);
-  };
+  }
 
   const proceedWithPayment = async () => {
     // Validate customer info
@@ -313,7 +313,7 @@ function App() {
       alert('❌ Failed to initiate payment. Please try again.');
       setPaymentLoading(false);
     }
-  };
+  }
 
   const quickBuyProduct = (product) => {
     const firstVariant = product.variants.edges[0]?.node;
@@ -336,21 +336,21 @@ function App() {
 
     // Process payment directly with the quick cart
     processPayment(quickCart);
-  };
+  }
 
   const handleProductClick = (product) => {
     window.open(`https://${process.env.REACT_APP_SHOPIFY_DOMAIN || 'j0dktb-z1.myshopify.com'}/products/${product.handle}`, '_blank');
-  };
+  }
 
   const handleLoadMore = () => {
     if (hasNextPage && !loading) {
       loadProducts(true);
     }
-  };
+  }
 
   const formatPrice = (price) => {
     return `₹${parseFloat(price).toLocaleString('en-IN')}`;
-  };
+  }
 
   const ProductCard = ({ product }) => {
     const firstImage = product.images.edges[0]?.node;
@@ -427,7 +427,7 @@ function App() {
         </div>
       </div>
     );
-  };
+  }
 
   const CustomerForm = () => {
     if (!showCustomerForm) return null;
@@ -614,7 +614,7 @@ function App() {
         </div>
       </div>
     );
-  };
+  }
     if (!showCart && cart.length === 0) return null;
 
     return (
@@ -695,7 +695,7 @@ function App() {
         </div>
       </div>
     );
-  };
+  }
 
   const FeaturedCollections = () => {
     const featuredImages = [
@@ -747,7 +747,7 @@ function App() {
         </div>
       </div>
     );
-  };
+  }
 
   const FeaturedProducts = () => {
     const [featuredProducts, setFeaturedProducts] = useState([]);
@@ -823,7 +823,7 @@ function App() {
         </div>
       </div>
     );
-  };
+  }
 
   const CollectionFilter = () => {
     return (
@@ -844,7 +844,7 @@ function App() {
         ))}
       </div>
     );
-  };
+  }
 
   const HeroSection = () => {
     return (
@@ -899,7 +899,7 @@ function App() {
         </div>
       </div>
     );
-  };
+  }
 
   const ProductsView = () => {
     return (
@@ -997,7 +997,7 @@ function App() {
         )}
       </div>
     );
-  };
+  }
 
   return (
     <div className="App min-h-screen bg-white">
