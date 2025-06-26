@@ -186,7 +186,7 @@ function App() {
         },
         body: JSON.stringify({
           amount: Math.round(totalAmount * 100), // Convert to paise
-          currency: 'INR',
+          currency: "INR",
           cart: cart.map(item => ({
             id: item.id,
             title: item.title,
@@ -194,7 +194,7 @@ function App() {
             price: parseFloat(item.variants.edges[0]?.node.price.amount || 0),
             handle: item.handle
           }))
-        }),
+        })
       });
 
       if (!orderResponse.ok) {
@@ -259,7 +259,7 @@ function App() {
           ondismiss: function(){
             console.log('Payment cancelled');
           }
-        },
+        }
       };
 
       const rzp = new window.Razorpay(options);
