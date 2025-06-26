@@ -170,7 +170,7 @@ async def create_razorpay_order(request: CreateOrderRequest):
         order_data = {
             "amount": request.amount,
             "currency": request.currency,
-            "receipt": f"order_{uuid.uuid4()}",
+            "receipt": f"ord_{uuid.uuid4().hex[:8]}",  # Short receipt ID under 40 chars
             "payment_capture": 1
         }
         
