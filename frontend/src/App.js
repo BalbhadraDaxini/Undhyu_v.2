@@ -196,7 +196,9 @@ function App() {
           }))
         })
       });
+      console.log(orderResponse)  // latest change To be removed later
 
+      
       if (!orderResponse.ok) {
         throw new Error('Failed to create order');
       }
