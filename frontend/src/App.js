@@ -196,9 +196,7 @@ function App() {
           }))
         })
       });
-      console.log(orderResponse)  // latest change To be removed later
-
-      
+		console.log(orderResponse);
       if (!orderResponse.ok) {
         throw new Error('Failed to create order');
       }
@@ -240,7 +238,7 @@ function App() {
             if (result.success) {
               alert('Payment successful! Order placed successfully.');
               setCart([]); // Clear cart
-              setShowCart(false);
+              //setShowCart(false);
             } else {
               alert('Payment verification failed. Please contact support.');
             }
