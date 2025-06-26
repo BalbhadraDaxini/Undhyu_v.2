@@ -11,20 +11,10 @@ import uuid
 from datetime import datetime
 import httpx
 from pydantic_settings import BaseSettings
-
-from fastapi import FastAPI, APIRouter, HTTPException, Query
-from dotenv import load_dotenv
-from starlette.middleware.cors import CORSMiddleware
-from motor.motor_asyncio import AsyncIOMotorClient
-import os
-import logging
-from pathlib import Path
-from pydantic import BaseModel, Field
-from typing import List, Optional, Dict, Any
-import uuid
-from datetime import datetime
-import httpx
-from pydantic_settings import BaseSettings
+import razorpay
+import hmac
+import hashlib
+import json
 
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
@@ -35,7 +25,10 @@ class Settings(BaseSettings):
     DB_NAME: str = os.getenv("DB_NAME", "undhyu_db")
     SHOPIFY_STORE_DOMAIN: str = os.getenv("SHOPIFY_STORE_DOMAIN", "j0dktb-z1.myshopify.com")
     SHOPIFY_STOREFRONT_ACCESS_TOKEN: str = os.getenv("SHOPIFY_STOREFRONT_ACCESS_TOKEN", "")
+    SHOPIFY_ADMIN_ACCESS_TOKEN: str = os.getenv("SHOPIFY_ADMIN_ACCESS_TOKEN", "")
     SHOPIFY_API_VERSION: str = os.getenv("SHOPIFY_API_VERSION", "2024-01")
+    RAZORPAY_KEY_ID: str = os.getenv("RAZORPAY_KEY_ID", "")
+    RAZORPAY_KEY_SECRET: str = os.getenv("RAZORPAY_KEY_SECRET", "")
     PORT: int = int(os.getenv("PORT", 8001))
     
     class Config:
@@ -51,6 +44,9 @@ except Exception as e:
     print(f"MongoDB connection failed: {e}")
     client = None
     db = None
+
+# Razorpay client
+razorpay_client = razorpay.Client(auth=(settings.RAZORPAY_KEY_ID, settings.RAZORPAY_KEY_SECRET))
 
 # Shopify Storefront API Client
 class ShopifyStorefrontClient:
@@ -86,10 +82,46 @@ class ShopifyStorefrontClient:
                 
             return response.json()
 
-# Initialize Shopify client
-shopify_client = ShopifyStorefrontClient(
+# Shopify Admin API Client
+class ShopifyAdminClient:
+    def __init__(self, store_domain: str, access_token: str, api_version: str = "2024-01"):
+        self.store_domain = store_domain
+        self.access_token = access_token
+        self.api_version = api_version
+        self.base_url = f"https://{store_domain}/admin/api/{api_version}"
+        
+    async def create_order(self, order_data: Dict) -> Dict[str, Any]:
+        headers = {
+            "Content-Type": "application/json",
+            "X-Shopify-Access-Token": self.access_token
+        }
+        
+        async with httpx.AsyncClient() as client:
+            response = await client.post(
+                f"{self.base_url}/orders.json",
+                headers=headers,
+                json={"order": order_data},
+                timeout=30.0
+            )
+            
+            if response.status_code not in [200, 201]:
+                raise HTTPException(
+                    status_code=response.status_code,
+                    detail=f"Shopify Admin API error: {response.text}"
+                )
+                
+            return response.json()
+
+# Initialize clients
+shopify_storefront_client = ShopifyStorefrontClient(
     store_domain=settings.SHOPIFY_STORE_DOMAIN,
     access_token=settings.SHOPIFY_STOREFRONT_ACCESS_TOKEN,
+    api_version=settings.SHOPIFY_API_VERSION
+)
+
+shopify_admin_client = ShopifyAdminClient(
+    store_domain=settings.SHOPIFY_STORE_DOMAIN,
+    access_token=settings.SHOPIFY_ADMIN_ACCESS_TOKEN,
     api_version=settings.SHOPIFY_API_VERSION
 )
 
@@ -108,16 +140,218 @@ class StatusCheck(BaseModel):
 class StatusCheckCreate(BaseModel):
     client_name: str
 
+class CartItem(BaseModel):
+    id: str
+    title: str
+    quantity: int
+    price: float
+    handle: str
+    variant_id: str = ""
+    image_url: str = ""
+
+class CreateOrderRequest(BaseModel):
+    amount: int  # Amount in paise
+    currency: str = "INR"
+    cart: List[CartItem]
+    customer_info: Dict[str, Any] = {}
+
+class VerifyPaymentRequest(BaseModel):
+    razorpay_order_id: str
+    razorpay_payment_id: str
+    razorpay_signature: str
+    cart: List[CartItem]
+    customer_info: Dict[str, Any] = {}
+
+# Payment endpoints
+@api_router.post("/create-razorpay-order")
+async def create_razorpay_order(request: CreateOrderRequest):
+    try:
+        # Create Razorpay order
+        order_data = {
+            "amount": request.amount,
+            "currency": request.currency,
+            "receipt": f"order_{uuid.uuid4()}",
+            "payment_capture": 1
+        }
+        
+        razorpay_order = razorpay_client.order.create(data=order_data)
+        
+        # Store order in MongoDB
+        if db:
+            order_record = {
+                "razorpay_order_id": razorpay_order["id"],
+                "amount": request.amount,
+                "currency": request.currency,
+                "cart": [item.dict() for item in request.cart],
+                "customer_info": request.customer_info,
+                "status": "created",
+                "created_at": datetime.utcnow()
+            }
+            await db.orders.insert_one(order_record)
+        
+        return {
+            "id": razorpay_order["id"],
+            "amount": razorpay_order["amount"],
+            "currency": razorpay_order["currency"],
+            "status": razorpay_order["status"],
+            "key": settings.RAZORPAY_KEY_ID
+        }
+        
+    except Exception as e:
+        logger.error(f"Failed to create Razorpay order: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to create order: {str(e)}")
+
+@api_router.post("/verify-payment")
+async def verify_payment(request: VerifyPaymentRequest):
+    try:
+        # Verify payment signature
+        signature = request.razorpay_signature
+        order_id = request.razorpay_order_id
+        payment_id = request.razorpay_payment_id
+        
+        message = f"{order_id}|{payment_id}"
+        generated_signature = hmac.new(
+            settings.RAZORPAY_KEY_SECRET.encode(),
+            message.encode(),
+            hashlib.sha256
+        ).hexdigest()
+        
+        if not hmac.compare_digest(signature, generated_signature):
+            raise HTTPException(status_code=400, detail="Invalid payment signature")
+        
+        # Fetch payment details from Razorpay
+        payment = razorpay_client.payment.fetch(payment_id)
+        
+        if payment["status"] != "captured":
+            raise HTTPException(status_code=400, detail="Payment not captured")
+        
+        # Create order in Shopify
+        shopify_order = None
+        try:
+            # Prepare line items for Shopify
+            line_items = []
+            for item in request.cart:
+                line_items.append({
+                    "title": item.title,
+                    "quantity": item.quantity,
+                    "price": str(item.price),
+                    "variant_id": item.variant_id if item.variant_id else None
+                })
+            
+            # Customer info
+            customer_info = request.customer_info or {}
+            
+            # Shopify order data
+            shopify_order_data = {
+                "line_items": line_items,
+                "customer": {
+                    "first_name": customer_info.get("first_name", "Customer"),
+                    "last_name": customer_info.get("last_name", ""),
+                    "email": customer_info.get("email", "customer@undhyu.com"),
+                    "phone": customer_info.get("phone", "")
+                },
+                "billing_address": {
+                    "first_name": customer_info.get("first_name", "Customer"),
+                    "last_name": customer_info.get("last_name", ""),
+                    "address1": customer_info.get("address", ""),
+                    "city": customer_info.get("city", ""),
+                    "province": customer_info.get("state", ""),
+                    "country": customer_info.get("country", "India"),
+                    "zip": customer_info.get("pincode", ""),
+                    "phone": customer_info.get("phone", "")
+                },
+                "shipping_address": {
+                    "first_name": customer_info.get("first_name", "Customer"),
+                    "last_name": customer_info.get("last_name", ""),
+                    "address1": customer_info.get("address", ""),
+                    "city": customer_info.get("city", ""),
+                    "province": customer_info.get("state", ""),
+                    "country": customer_info.get("country", "India"),
+                    "zip": customer_info.get("pincode", ""),
+                    "phone": customer_info.get("phone", "")
+                },
+                "financial_status": "paid",
+                "tags": "razorpay,online",
+                "note": f"Payment ID: {payment_id}, Order ID: {order_id}",
+                "transactions": [
+                    {
+                        "kind": "sale",
+                        "status": "success",
+                        "amount": str(payment["amount"] / 100),  # Convert from paise to rupees
+                        "currency": "INR",
+                        "gateway": "razorpay"
+                    }
+                ]
+            }
+            
+            shopify_order = await shopify_admin_client.create_order(shopify_order_data)
+            
+        except Exception as e:
+            logger.warning(f"Failed to create Shopify order: {str(e)}")
+            # Continue even if Shopify order creation fails
+        
+        # Update order in MongoDB
+        if db:
+            update_data = {
+                "razorpay_payment_id": payment_id,
+                "status": "paid",
+                "paid_at": datetime.utcnow(),
+                "payment_details": payment
+            }
+            
+            if shopify_order:
+                update_data["shopify_order_id"] = shopify_order["order"]["id"]
+                update_data["shopify_order"] = shopify_order["order"]
+            
+            await db.orders.update_one(
+                {"razorpay_order_id": order_id},
+                {"$set": update_data}
+            )
+        
+        return {
+            "success": True,
+            "payment_id": payment_id,
+            "order_id": order_id,
+            "amount": payment["amount"],
+            "status": payment["status"],
+            "shopify_order_id": shopify_order["order"]["id"] if shopify_order else None,
+            "message": "Payment verified and order created successfully"
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Payment verification failed: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Payment verification failed: {str(e)}")
+
+@api_router.get("/orders")
+async def get_orders():
+    if not db:
+        return {"orders": []}
+    try:
+        orders = await db.orders.find().sort("created_at", -1).to_list(100)
+        # Convert ObjectId to string for JSON serialization
+        for order in orders:
+            if "_id" in order:
+                order["_id"] = str(order["_id"])
+        return {"orders": orders}
+    except Exception as e:
+        logger.error(f"Failed to fetch orders: {str(e)}")
+        return {"orders": []}
+
 # Original status endpoints
 @api_router.post("/status", response_model=StatusCheck)
 async def create_status_check(input: StatusCheckCreate):
     status_dict = input.dict()
     status_obj = StatusCheck(**status_dict)
-    _ = await db.status_checks.insert_one(status_obj.dict())
+    if db:
+        _ = await db.status_checks.insert_one(status_obj.dict())
     return status_obj
 
 @api_router.get("/status", response_model=List[StatusCheck])
 async def get_status_checks():
+    if not db:
+        return []
     status_checks = await db.status_checks.find().to_list(1000)
     return [StatusCheck(**status_check) for status_check in status_checks]
 
@@ -230,7 +464,7 @@ async def get_products(
     }
     
     try:
-        result = await shopify_client.execute_query(graphql_query, variables)
+        result = await shopify_storefront_client.execute_query(graphql_query, variables)
         
         if "errors" in result:
             raise HTTPException(status_code=400, detail=result["errors"])
@@ -242,6 +476,7 @@ async def get_products(
         }
         
     except Exception as e:
+        logger.error(f"Failed to fetch products: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
 
 @api_router.get("/products/{product_handle}")
@@ -320,7 +555,7 @@ async def get_product_by_handle(product_handle: str):
     variables = {"handle": product_handle}
     
     try:
-        result = await shopify_client.execute_query(graphql_query, variables)
+        result = await shopify_storefront_client.execute_query(graphql_query, variables)
         
         if "errors" in result:
             raise HTTPException(status_code=400, detail=result["errors"])
@@ -334,6 +569,7 @@ async def get_product_by_handle(product_handle: str):
     except HTTPException:
         raise
     except Exception as e:
+        logger.error(f"Failed to fetch product: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
 
 # Shopify Collections Endpoints
@@ -392,7 +628,7 @@ async def get_collections(
     }
     
     try:
-        result = await shopify_client.execute_query(graphql_query, variables)
+        result = await shopify_storefront_client.execute_query(graphql_query, variables)
         
         if "errors" in result:
             raise HTTPException(status_code=400, detail=result["errors"])
@@ -409,6 +645,7 @@ async def get_collections(
         }
         
     except Exception as e:
+        logger.error(f"Failed to fetch collections: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
 
 @api_router.get("/collections/{collection_handle}")
@@ -470,7 +707,7 @@ async def get_collection_by_handle(collection_handle: str):
     variables = {"handle": collection_handle}
     
     try:
-        result = await shopify_client.execute_query(graphql_query, variables)
+        result = await shopify_storefront_client.execute_query(graphql_query, variables)
         
         if "errors" in result:
             raise HTTPException(status_code=400, detail=result["errors"])
@@ -484,6 +721,7 @@ async def get_collection_by_handle(collection_handle: str):
     except HTTPException:
         raise
     except Exception as e:
+        logger.error(f"Failed to fetch collection: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
 
 @api_router.get("/collections/featured")
@@ -507,7 +745,19 @@ async def get_featured_collections():
 # Root endpoint
 @api_router.get("/")
 async def root():
-    return {"message": "Welcome to Undhyu.com API - Authentic Indian Fashion"}
+    return {"message": "Welcome to Undhyu.com API - Authentic Indian Fashion with Razorpay Integration"}
+
+# Add health check endpoint for deployment
+@api_router.get("/health")
+async def health_check():
+    return {
+        "status": "healthy",
+        "timestamp": datetime.utcnow(),
+        "shopify_configured": bool(settings.SHOPIFY_STOREFRONT_ACCESS_TOKEN),
+        "shopify_admin_configured": bool(settings.SHOPIFY_ADMIN_ACCESS_TOKEN),
+        "razorpay_configured": bool(settings.RAZORPAY_KEY_ID and settings.RAZORPAY_KEY_SECRET),
+        "mongodb_connected": bool(client)
+    }
 
 # Include the router in the main app
 app.include_router(api_router)
@@ -537,16 +787,6 @@ logger = logging.getLogger(__name__)
 async def shutdown_db_client():
     if client:
         client.close()
-
-# Add health check endpoint for deployment
-@api_router.get("/health")
-async def health_check():
-    return {
-        "status": "healthy",
-        "timestamp": datetime.utcnow(),
-        "shopify_configured": bool(settings.SHOPIFY_STOREFRONT_ACCESS_TOKEN),
-        "mongodb_connected": bool(client)
-    }
 
 if __name__ == "__main__":
     import uvicorn
