@@ -20,6 +20,19 @@ function App() {
   const [cart, setCart] = useState([]);
   const [showCart, setShowCart] = useState(false);
   const [paymentLoading, setPaymentLoading] = useState(false);
+  const [showCustomerForm, setShowCustomerForm] = useState(false);
+  const [customerInfo, setCustomerInfo] = useState({
+    first_name: '',
+    last_name: '',
+    email: '',
+    phone: '',
+    address: '',
+    city: '',
+    state: '',
+    pincode: '',
+    country: 'India'
+  });
+  const [pendingCart, setPendingCart] = useState(null);
 
   // Professional hero images inspired by Soch
   const heroImages = useMemo(() => [
