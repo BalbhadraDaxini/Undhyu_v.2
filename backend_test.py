@@ -2,6 +2,9 @@
 import requests
 import sys
 import json
+import hmac
+import hashlib
+import uuid
 from datetime import datetime
 
 class UndhyuAPITester:
@@ -10,6 +13,8 @@ class UndhyuAPITester:
         self.tests_run = 0
         self.tests_passed = 0
         self.test_results = []
+        # Razorpay test key from backend/.env
+        self.razorpay_key_secret = "DJutG7yBw0KVpcBk81drh2bd"
 
     def run_test(self, name, method, endpoint, expected_status=200, params=None):
         """Run a single API test"""
