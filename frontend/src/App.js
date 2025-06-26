@@ -13,9 +13,7 @@ function App() {
   const SHOPIFY_DOMAIN = 'j0dktb-z1.myshopify.com';
   const STOREFRONT_ACCESS_TOKEN = 'eeae7a5247421a8b8a14711145ecd93b'; // Fixed token
   const RAZORPAY_KEY_ID = 'rzp_live_NIogFPd28THyOF'; // Your live key
-  const API_BASE_URL = 'https://undhyu-v-2.vercel.app/api';
-  // const API_BASE_URL = 'https://f3ddbd50-9f5b-46dc-bdc9-b1193cd6edca.preview.emergentagent.com/api';
-  // const API_BASE_URL = process.env.REACT_APP_BACKEND_URL || '/api';
+  const API_BASE_URL = process.env.REACT_APP_BACKEND_URL || '/api';
 
   // Load Razorpay script
   useEffect(() => {
@@ -170,54 +168,24 @@ function App() {
     return cart.reduce((total, item) => total + item.quantity, 0);
   };
 
-
-const debugLog = (message, data) => {
-  console.log(`[DEBUG] ${message}:`, data);
-};
-
-  
   // Payment processing
   const processPayment = async () => {
     const totalAmount = getTotalAmount();
-
- debugLog('Starting payment process', {
-    totalAmount,
-    cartItems: cart.length,
-    apiUrl: API_BASE_URL
-  });
     
     if (totalAmount === 0) {
       alert('Please add items to cart');
       return;
     }
 
-    try { 
+    try {
       // Create order
-      // const orderResponse = await fetch(`${API_BASE_URL}/create-razorpay-order`, {
-      //   method: 'POST',
-      //   headers: {
-      //     'Content-Type': 'application/json',
-      //   },
-      //   body: JSON.stringify({
-      //     amount: Math.round(totalAmount * 100), // Convert to paise
-      //     currency: 'INR',
-      //     cart: cart.map(item => ({
-      //       id: item.id,
-      //       title: item.title,
-      //       quantity: item.quantity,
-      //       price: parseFloat(item.variants.edges[0]?.node.price.amount || 0),
-      //       handle: item.handle
-      //     }))
-      //   }),
-      // });
-        console.log{'****'}
-        const orderResponse = await fetch(`${API_BASE_URL}/create-razorpay-order`, {
+      const orderResponse = await fetch(`${API_BASE_URL}/create-razorpay-order`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          amount: Math.round(totalAmount * 100),
+          amount: Math.round(totalAmount * 100), // Convert to paise
           currency: 'INR',
           cart: cart.map(item => ({
             id: item.id,
@@ -229,16 +197,6 @@ const debugLog = (message, data) => {
         }),
       });
 
-    // Log for debugging
-    console.log('Response status:', orderResponse.status);
-    const responseText = await orderResponse.text();
-    console.log('Raw response text:', responseText);
-
-      // const text = await orderResponse.text(); // log raw response
-      // console.log('Raw backend response:', text);
-
-
-      
       if (!orderResponse.ok) {
         throw new Error('Failed to create order');
       }
@@ -253,78 +211,29 @@ const debugLog = (message, data) => {
         name: 'Undhyu.com',
         description: 'Authentic Indian Fashion',
         order_id: orderData.id,
-      
-        
+        handler: async function(response) {
+          try {
+            // Verify payment
+            const verifyResponse = await fetch(`${API_BASE_URL}/verify-payment`, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({
+                razorpay_order_id: response.razorpay_order_id,
+                razorpay_payment_id: response.razorpay_payment_id,
+                razorpay_signature: response.razorpay_signature,
+                cart: cart.map(item => ({
+                  id: item.id,
+                  title: item.title,
+                  quantity: item.quantity,
+                  price: parseFloat(item.variants.edges[0]?.node.price.amount || 0),
+                  handle: item.handle
+                }))
+              }),
+            });
 
-  handler: async function(response) {
-  // Close the cart immediately to show progress
-  setShowCart(false);
-  
-  // Show loading state
-  alert('Processing payment... Please wait.');
-  
-  try {
-    // Verify payment
-    const verifyResponse = await fetch(`${API_BASE_URL}/verify-payment`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        razorpay_order_id: response.razorpay_order_id,
-        razorpay_payment_id: response.razorpay_payment_id,
-        razorpay_signature: response.razorpay_signature,
-        cart: cart.map(item => ({
-          id: item.id,
-          title: item.title,
-          quantity: item.quantity,
-          price: parseFloat(item.variants.edges[0]?.node.price.amount || 0),
-          handle: item.handle
-        }))
-      }),
-    });
-
-    const result = await verifyResponse.json();
-    
-    if (result.success) {
-      // Clear cart and show success
-      setCart([]);
-      alert('🎉 Payment successful! Your order has been placed successfully. You will receive confirmation shortly.');
-      
-      // Optionally redirect to a success page
-      // window.location.href = '/order-success';
-    } else {
-      alert('❌ Payment verification failed. Please contact our support team with payment ID: ' + response.razorpay_payment_id);
-    }
-  } catch (error) {
-    console.error('Payment verification error:', error);
-    alert('❌ Payment verification failed. Please contact our support team with payment ID: ' + response.razorpay_payment_id);
-  }
-},
-        
-        // handler: async function(response) {
-        //   try {
-        //     // Verify payment
-        //     const verifyResponse = await fetch(`${API_BASE_URL}/verify-payment`, {
-        //       method: 'POST',
-        //       headers: {
-        //         'Content-Type': 'application/json',
-        //       },
-        //       body: JSON.stringify({
-        //         razorpay_order_id: response.razorpay_order_id,
-        //         razorpay_payment_id: response.razorpay_payment_id,
-        //         razorpay_signature: response.razorpay_signature,
-        //         cart: cart.map(item => ({
-        //           id: item.id,
-        //           title: item.title,
-        //           quantity: item.quantity,
-        //           price: parseFloat(item.variants.edges[0]?.node.price.amount || 0),
-        //           handle: item.handle
-        //         }))
-        //       }),
-        //     });
-
-        // const result = await verifyResponse.json();
+            const result = await verifyResponse.json();
             
             if (result.success) {
               alert('Payment successful! Order placed successfully.');
