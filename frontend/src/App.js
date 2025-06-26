@@ -335,7 +335,7 @@ function App() {
     }];
 
     // Process payment directly with the quick cart
-    processPayment({}, quickCart);
+    processPayment(quickCart);
   };
 
   const handleProductClick = (product) => {
