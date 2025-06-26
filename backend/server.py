@@ -177,7 +177,7 @@ async def create_razorpay_order(request: CreateOrderRequest):
         razorpay_order = razorpay_client.order.create(data=order_data)
         
         # Store order in MongoDB
-        if db:
+        if db is not None:
             order_record = {
                 "razorpay_order_id": razorpay_order["id"],
                 "amount": request.amount,
