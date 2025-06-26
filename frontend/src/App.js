@@ -15,6 +15,11 @@ function App() {
   const [hasNextPage, setHasNextPage] = useState(false);
   const [endCursor, setEndCursor] = useState('');
   const [currentView, setCurrentView] = useState('home');
+  
+  // Cart state
+  const [cart, setCart] = useState([]);
+  const [showCart, setShowCart] = useState(false);
+  const [paymentLoading, setPaymentLoading] = useState(false);
 
   // Professional hero images inspired by Soch
   const heroImages = useMemo(() => [
@@ -67,6 +72,21 @@ function App() {
     return () => clearInterval(interval);
   }, [heroImages.length]);
 
+  // Load Razorpay script
+  useEffect(() => {
+    const loadRazorpayScript = () => {
+      return new Promise((resolve) => {
+        const script = document.createElement('script');
+        script.src = 'https://checkout.razorpay.com/v1/checkout.js';
+        script.onload = () => resolve(true);
+        script.onerror = () => resolve(false);
+        document.body.appendChild(script);
+      });
+    };
+
+    loadRazorpayScript();
+  }, []);
+
   const loadCollections = async () => {
     try {
       const response = await axios.get(`${API_BASE_URL}/api/collections`);
@@ -106,8 +126,177 @@ function App() {
     }
   };
 
+  const addToCart = (product) => {
+    const firstVariant = product.variants.edges[0]?.node;
+    const firstImage = product.images.edges[0]?.node;
+    
+    if (!firstVariant) {
+      alert('Product not available');
+      return;
+    }
+
+    const cartItem = {
+      id: product.id,
+      title: product.title,
+      handle: product.handle,
+      quantity: 1,
+      price: parseFloat(firstVariant.price.amount),
+      variant_id: firstVariant.id,
+      image_url: firstImage?.url || ''
+    };
+
+    setCart(prevCart => {
+      const existingItem = prevCart.find(item => item.id === product.id);
+      if (existingItem) {
+        return prevCart.map(item =>
+          item.id === product.id
+            ? { ...item, quantity: item.quantity + 1 }
+            : item
+        );
+      }
+      return [...prevCart, cartItem];
+    });
+
+    // Show cart briefly
+    setShowCart(true);
+    setTimeout(() => setShowCart(false), 2000);
+  };
+
+  const removeFromCart = (productId) => {
+    setCart(prevCart => prevCart.filter(item => item.id !== productId));
+  };
+
+  const updateCartQuantity = (productId, quantity) => {
+    if (quantity <= 0) {
+      removeFromCart(productId);
+      return;
+    }
+    
+    setCart(prevCart =>
+      prevCart.map(item =>
+        item.id === productId ? { ...item, quantity } : item
+      )
+    );
+  };
+
+  const getCartTotal = () => {
+    return cart.reduce((total, item) => total + (item.price * item.quantity), 0);
+  };
+
+  const getCartCount = () => {
+    return cart.reduce((total, item) => total + item.quantity, 0);
+  };
+
+  const processPayment = async (customerInfo = {}) => {
+    if (cart.length === 0) {
+      alert('Your cart is empty');
+      return;
+    }
+
+    setPaymentLoading(true);
+
+    try {
+      const totalAmount = Math.round(getCartTotal() * 100); // Convert to paise
+
+      // Create Razorpay order
+      const orderResponse = await axios.post(`${API_BASE_URL}/api/create-razorpay-order`, {
+        amount: totalAmount,
+        currency: 'INR',
+        cart: cart,
+        customer_info: customerInfo
+      });
+
+      const { id: order_id, amount, currency, key } = orderResponse.data;
+
+      // Razorpay payment options
+      const options = {
+        key: key,
+        amount: amount,
+        currency: currency,
+        name: 'Undhyu.com',
+        description: 'Authentic Indian Fashion',
+        order_id: order_id,
+        handler: async function (response) {
+          try {
+            // Verify payment
+            const verifyResponse = await axios.post(`${API_BASE_URL}/api/verify-payment`, {
+              razorpay_order_id: response.razorpay_order_id,
+              razorpay_payment_id: response.razorpay_payment_id,
+              razorpay_signature: response.razorpay_signature,
+              cart: cart,
+              customer_info: customerInfo
+            });
+
+            if (verifyResponse.data.success) {
+              alert('Payment successful! Your order has been placed.');
+              setCart([]); // Clear cart
+              setShowCart(false);
+            } else {
+              alert('Payment verification failed. Please contact support.');
+            }
+          } catch (error) {
+            console.error('Payment verification error:', error);
+            alert('Payment verification failed. Please contact support.');
+          } finally {
+            setPaymentLoading(false);
+          }
+        },
+        prefill: {
+          name: customerInfo.first_name || '',
+          email: customerInfo.email || '',
+          contact: customerInfo.phone || ''
+        },
+        theme: {
+          color: '#000000'
+        },
+        modal: {
+          ondismiss: function() {
+            setPaymentLoading(false);
+          }
+        }
+      };
+
+      const rzp = new window.Razorpay(options);
+      rzp.open();
+
+    } catch (error) {
+      console.error('Payment initiation error:', error);
+      alert('Failed to initiate payment. Please try again.');
+      setPaymentLoading(false);
+    }
+  };
+
+  const quickBuyProduct = (product) => {
+    const firstVariant = product.variants.edges[0]?.node;
+    const firstImage = product.images.edges[0]?.node;
+    
+    if (!firstVariant) {
+      alert('Product not available');
+      return;
+    }
+
+    const quickCart = [{
+      id: product.id,
+      title: product.title,
+      handle: product.handle,
+      quantity: 1,
+      price: parseFloat(firstVariant.price.amount),
+      variant_id: firstVariant.id,
+      image_url: firstImage?.url || ''
+    }];
+
+    // Temporarily set cart and process payment
+    const previousCart = [...cart];
+    setCart(quickCart);
+    
+    setTimeout(() => {
+      processPayment();
+      setCart(previousCart); // Restore original cart if payment fails
+    }, 100);
+  };
+
   const handleProductClick = (product) => {
-    window.open(`https://j0dktb-z1.myshopify.com/products/${product.handle}`, '_blank');
+    window.open(`https://${process.env.REACT_APP_SHOPIFY_DOMAIN || 'j0dktb-z1.myshopify.com'}/products/${product.handle}`, '_blank');
   };
 
   const handleLoadMore = () => {
@@ -117,7 +306,7 @@ function App() {
   };
 
   const formatPrice = (price) => {
-    return `₹${parseFloat(price.amount).toLocaleString('en-IN')}`;
+    return `₹${parseFloat(price).toLocaleString('en-IN')}`;
   };
 
   const ProductCard = ({ product }) => {
@@ -126,10 +315,7 @@ function App() {
     const hasDiscount = firstVariant?.compareAtPrice;
     
     return (
-      <div 
-        className="product-card group cursor-pointer bg-white rounded-lg shadow-sm hover:shadow-xl transition-all duration-300 border border-gray-100"
-        onClick={() => handleProductClick(product)}
-      >
+      <div className="product-card group cursor-pointer bg-white rounded-lg shadow-sm hover:shadow-xl transition-all duration-300 border border-gray-100">
         <div className="relative overflow-hidden">
           {firstImage && (
             <div className="aspect-[3/4] overflow-hidden">
@@ -137,6 +323,7 @@ function App() {
                 src={firstImage.url}
                 alt={firstImage.altText || product.title}
                 className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                onClick={() => handleProductClick(product)}
               />
             </div>
           )}
@@ -148,9 +335,13 @@ function App() {
           )}
           
           <div className="absolute top-3 right-3 opacity-0 group-hover:opacity-100 transition-opacity">
-            <button className="p-2 bg-white rounded-full shadow-lg hover:bg-gray-50">
+            <button 
+              onClick={() => addToCart(product)}
+              className="p-2 bg-white rounded-full shadow-lg hover:bg-gray-50"
+              title="Add to Cart"
+            >
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 3h2l.4 2M7 13h10l4-8H5.4m0 0L7 13m0 0l-2.5 5M7 13l2.5 5m6-5v6a2 2 0 01-2 2H9a2 2 0 01-2-2v-6m8 0V9a2 2 0 00-2-2H9a2 2 0 00-2 2v4.01" />
               </svg>
             </button>
           </div>
@@ -162,19 +353,117 @@ function App() {
           </h3>
           
           {firstVariant && (
-            <div className="flex items-center gap-2 mb-2">
+            <div className="flex items-center gap-2 mb-3">
               <span className="text-lg font-bold text-gray-900">
-                {formatPrice(firstVariant.price)}
+                {formatPrice(firstVariant.price.amount)}
               </span>
               {firstVariant.compareAtPrice && (
                 <span className="text-sm text-gray-500 line-through">
-                  {formatPrice(firstVariant.compareAtPrice)}
+                  {formatPrice(firstVariant.compareAtPrice.amount)}
                 </span>
               )}
             </div>
           )}
           
-          <p className="text-xs text-gray-600 uppercase tracking-wide font-medium">{product.vendor}</p>
+          <div className="flex gap-2">
+            <button
+              onClick={() => addToCart(product)}
+              className="flex-1 bg-black text-white py-2 px-3 rounded text-xs font-medium hover:bg-gray-800 transition-colors"
+            >
+              Add to Cart
+            </button>
+            <button
+              onClick={() => quickBuyProduct(product)}
+              className="flex-1 border border-black text-black py-2 px-3 rounded text-xs font-medium hover:bg-black hover:text-white transition-colors"
+            >
+              Buy Now
+            </button>
+          </div>
+          
+          <p className="text-xs text-gray-600 uppercase tracking-wide font-medium mt-2">{product.vendor}</p>
+        </div>
+      </div>
+    );
+  };
+
+  const CartSidebar = () => {
+    if (!showCart && cart.length === 0) return null;
+
+    return (
+      <div className={`fixed inset-0 z-50 ${showCart ? 'block' : 'hidden'}`}>
+        <div className="absolute inset-0 bg-black bg-opacity-50" onClick={() => setShowCart(false)}></div>
+        <div className="absolute right-0 top-0 h-full w-full max-w-md bg-white shadow-xl">
+          <div className="flex flex-col h-full">
+            <div className="flex items-center justify-between p-4 border-b">
+              <h2 className="text-lg font-semibold">Shopping Cart ({getCartCount()})</h2>
+              <button onClick={() => setShowCart(false)} className="p-2 hover:bg-gray-100 rounded">
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+            
+            <div className="flex-1 overflow-y-auto p-4">
+              {cart.length === 0 ? (
+                <div className="text-center py-16">
+                  <div className="text-4xl mb-4">🛒</div>
+                  <p className="text-gray-600">Your cart is empty</p>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {cart.map((item) => (
+                    <div key={item.id} className="flex items-center space-x-3 border-b pb-4">
+                      {item.image_url && (
+                        <img src={item.image_url} alt={item.title} className="w-16 h-16 object-cover rounded" />
+                      )}
+                      <div className="flex-1">
+                        <h3 className="font-medium text-sm">{item.title}</h3>
+                        <p className="text-gray-600 text-sm">{formatPrice(item.price)}</p>
+                        <div className="flex items-center space-x-2 mt-2">
+                          <button
+                            onClick={() => updateCartQuantity(item.id, item.quantity - 1)}
+                            className="w-6 h-6 border rounded text-xs hover:bg-gray-100"
+                          >
+                            -
+                          </button>
+                          <span className="text-sm">{item.quantity}</span>
+                          <button
+                            onClick={() => updateCartQuantity(item.id, item.quantity + 1)}
+                            className="w-6 h-6 border rounded text-xs hover:bg-gray-100"
+                          >
+                            +
+                          </button>
+                        </div>
+                      </div>
+                      <button
+                        onClick={() => removeFromCart(item.id)}
+                        className="text-red-500 hover:text-red-700"
+                      >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                        </svg>
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+            
+            {cart.length > 0 && (
+              <div className="border-t p-4">
+                <div className="flex justify-between items-center mb-4">
+                  <span className="font-semibold">Total: {formatPrice(getCartTotal())}</span>
+                </div>
+                <button
+                  onClick={() => processPayment()}
+                  disabled={paymentLoading}
+                  className="w-full bg-black text-white py-3 rounded-lg font-medium hover:bg-gray-800 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {paymentLoading ? 'Processing...' : 'Checkout'}
+                </button>
+              </div>
+            )}
+          </div>
         </div>
       </div>
     );
@@ -485,7 +774,7 @@ function App() {
   return (
     <div className="App min-h-screen bg-white">
       {/* Header */}
-      <header className="bg-white shadow-sm border-b">
+      <header className="bg-white shadow-sm border-b sticky top-0 z-40">
         <div className="max-w-7xl mx-auto px-6">
           <div className="flex items-center justify-between h-16">
             <div className="flex items-center">
@@ -534,10 +823,18 @@ function App() {
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
                 </svg>
               </button>
-              <button className="p-2 text-gray-700 hover:text-black">
+              <button 
+                onClick={() => setShowCart(true)}
+                className="p-2 text-gray-700 hover:text-black relative"
+              >
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 3h2l.4 2M7 13h10l4-8H5.4m0 0L7 13m0 0l-2.5 5M7 13l2.5 5m6-5v6a2 2 0 01-2 2H9a2 2 0 01-2-2v-6m8 0V9a2 2 0 00-2-2H9a2 2 0 00-2 2v4.01" />
                 </svg>
+                {getCartCount() > 0 && (
+                  <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
+                    {getCartCount()}
+                  </span>
+                )}
               </button>
             </div>
           </div>
@@ -556,6 +853,9 @@ function App() {
           <ProductsView />
         )}
       </main>
+      
+      {/* Cart Sidebar */}
+      <CartSidebar />
       
       {/* Footer */}
       <footer className="bg-gray-900 text-white py-12">
