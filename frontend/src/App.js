@@ -200,7 +200,7 @@ function App() {
     return cart.reduce((total, item) => total + item.quantity, 0);
   };
 
-  const processPayment = async (customerInfo = {}, quickBuyCart = null) => {
+  const processPayment = async (quickBuyCart = null) => {
     const cartToUse = quickBuyCart || cart;
     
     if (cartToUse.length === 0) {
@@ -208,43 +208,30 @@ function App() {
       return;
     }
 
-    // If no customer info provided, collect it first
-    if (!customerInfo.email) {
-      const email = prompt('Please enter your email address:');
-      const phone = prompt('Please enter your phone number:');
-      const name = prompt('Please enter your full name:');
-      const address = prompt('Please enter your delivery address:');
-      const city = prompt('Please enter your city:');
-      const pincode = prompt('Please enter your pincode:');
-      
-      if (!email || !phone || !name || !address || !city || !pincode) {
-        alert('Please provide all required details to proceed with payment.');
-        return;
-      }
-      
-      customerInfo = {
-        email,
-        phone,
-        first_name: name.split(' ')[0] || name,
-        last_name: name.split(' ').slice(1).join(' ') || '',
-        address,
-        city,
-        pincode,
-        state: '',
-        country: 'India'
-      };
+    // Store the cart to use and show customer form
+    setPendingCart(cartToUse);
+    setShowCustomerForm(true);
+  };
+
+  const proceedWithPayment = async () => {
+    // Validate customer info
+    if (!customerInfo.email || !customerInfo.phone || !customerInfo.first_name || 
+        !customerInfo.address || !customerInfo.city || !customerInfo.pincode) {
+      alert('Please fill in all required fields');
+      return;
     }
 
     setPaymentLoading(true);
+    setShowCustomerForm(false);
 
     try {
-      const totalAmount = Math.round(cartToUse.reduce((total, item) => total + (item.price * item.quantity), 0) * 100); // Convert to paise
+      const totalAmount = Math.round(pendingCart.reduce((total, item) => total + (item.price * item.quantity), 0) * 100); // Convert to paise
 
       // Create Razorpay order
       const orderResponse = await axios.post(`${API_BASE_URL}/api/create-razorpay-order`, {
         amount: totalAmount,
         currency: 'INR',
-        cart: cartToUse,
+        cart: pendingCart,
         customer_info: customerInfo
       });
 
@@ -266,7 +253,7 @@ function App() {
               razorpay_order_id: response.razorpay_order_id,
               razorpay_payment_id: response.razorpay_payment_id,
               razorpay_signature: response.razorpay_signature,
-              cart: cartToUse,
+              cart: pendingCart,
               customer_info: customerInfo
             });
 
@@ -274,8 +261,19 @@ function App() {
               alert('🎉 Payment successful! Your order has been placed and will appear in your Shopify admin.');
               setCart([]); // Clear cart
               setShowCart(false);
-              // Redirect to a success page or refresh
-              window.location.reload();
+              setPendingCart(null);
+              // Reset customer info for next order
+              setCustomerInfo({
+                first_name: '',
+                last_name: '',
+                email: '',
+                phone: '',
+                address: '',
+                city: '',
+                state: '',
+                pincode: '',
+                country: 'India'
+              });
             } else {
               alert('❌ Payment verification failed. Please contact support with your payment ID: ' + response.razorpay_payment_id);
             }
@@ -297,7 +295,6 @@ function App() {
         modal: {
           ondismiss: function() {
             setPaymentLoading(false);
-            alert('Payment cancelled. You can try again anytime.');
           }
         }
       };
