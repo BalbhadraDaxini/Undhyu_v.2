@@ -324,14 +324,8 @@ function App() {
       image_url: firstImage?.url || ''
     }];
 
-    // Temporarily set cart and process payment
-    const previousCart = [...cart];
-    setCart(quickCart);
-    
-    setTimeout(() => {
-      processPayment();
-      setCart(previousCart); // Restore original cart if payment fails
-    }, 100);
+    // Process payment directly with the quick cart
+    processPayment({}, quickCart);
   };
 
   const handleProductClick = (product) => {
