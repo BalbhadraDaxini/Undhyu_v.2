@@ -326,7 +326,7 @@ async def verify_payment(request: VerifyPaymentRequest):
 
 @api_router.get("/orders")
 async def get_orders():
-    if not db:
+    if db is None:
         return {"orders": []}
     try:
         orders = await db.orders.find().sort("created_at", -1).to_list(100)
