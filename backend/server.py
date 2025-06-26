@@ -291,7 +291,7 @@ async def verify_payment(request: VerifyPaymentRequest):
             # Continue even if Shopify order creation fails
         
         # Update order in MongoDB
-        if db:
+        if db is not None:
             update_data = {
                 "razorpay_payment_id": payment_id,
                 "status": "paid",
