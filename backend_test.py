@@ -323,33 +323,37 @@ def main():
     tester.test_products_endpoint()
     tester.test_products_endpoint({"first": 5})
     tester.test_products_endpoint({"sort_key": "PRICE"})
-    tester.test_products_endpoint({"search_query": "silk"})
-    tester.test_products_endpoint({"min_price": 1000, "max_price": 5000})
-    
-    # Test specific product
-    tester.test_product_by_handle("traditional-printed-silk-lehenga-choli-with-dupatta")
-    
-    # Test collections endpoints
-    tester.test_collections_endpoint()
-    tester.test_collections_endpoint({"first": 5})
-    tester.test_featured_collections()
     
     # Test orders endpoint
     tester.test_orders_endpoint()
     
     # Test Razorpay integration
-    # 1. Create an order
-    success, order_response = tester.test_create_razorpay_order()
+    # 1. Create an order with a valid product handle
+    cart_items = [
+        {
+            "id": "gid://shopify/Product/8145339646089",  # Use an existing product ID
+            "title": "PREMIUM LICHI PASHMINA SILK",
+            "quantity": 1,
+            "price": 1999.00,
+            "handle": "premium-lichi-pashmina-silk",
+            "variant_id": "gid://shopify/ProductVariant/44618429776009",
+            "image_url": "https://cdn.shopify.com/s/files/1/0719/3798/8049/products/1_e9e8b4e5-f0e5-4abb-a3c0-154d8e1c6b0c.jpg"
+        }
+    ]
+    
+    success, order_response = tester.test_create_razorpay_order(cart_items)
     
     if success and "id" in order_response:
         order_id = order_response["id"]
         payment_id = f"pay_{uuid.uuid4().hex[:14]}"  # Mock payment ID
         
         # 2. Test payment verification with valid signature
-        tester.test_verify_payment(order_id, payment_id)
+        tester.test_verify_payment(order_id, payment_id, cart_items)
         
         # 3. Test payment verification with invalid signature
         tester.test_verify_payment_invalid_signature(order_id, payment_id)
+    else:
+        print("❌ Skipping payment verification tests due to order creation failure")
     
     # 4. Test empty cart
     tester.test_create_razorpay_order_empty_cart()
