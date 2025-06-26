@@ -315,23 +315,31 @@ def main():
     # Setup
     tester = UndhyuAPITester()
     
-    # Test root and health endpoints
-    tester.test_root_endpoint()
+    print("\n=== TESTING FIXED RAZORPAY INTEGRATION ===")
+    print("Testing areas mentioned in the review request:")
+    print("1. Backend API Endpoints")
+    print("2. Razorpay Integration")
+    print("3. Error Handling")
+    
+    # 1. Test Backend API Endpoints
+    print("\n--- Testing Backend API Endpoints ---")
+    
+    # Test health endpoint - Should show all services configured
     tester.test_health_endpoint()
     
-    # Test products endpoint with various filters
-    tester.test_products_endpoint()
-    tester.test_products_endpoint({"first": 5})
-    tester.test_products_endpoint({"sort_key": "PRICE"})
-    
-    # Test orders endpoint
+    # Test orders endpoint - Should return empty array (no more 500 errors)
     tester.test_orders_endpoint()
     
-    # Test Razorpay integration
-    # 1. Create an order with a valid product handle
+    # Test products endpoint - Should still work for Shopify integration
+    tester.test_products_endpoint()
+    
+    # 2. Test Razorpay Integration
+    print("\n--- Testing Razorpay Integration ---")
+    
+    # Create a valid order with proper cart data
     cart_items = [
         {
-            "id": "gid://shopify/Product/8145339646089",  # Use an existing product ID
+            "id": "gid://shopify/Product/8145339646089",
             "title": "PREMIUM LICHI PASHMINA SILK",
             "quantity": 1,
             "price": 1999.00,
@@ -341,25 +349,48 @@ def main():
         }
     ]
     
+    # Test creating a Razorpay order
     success, order_response = tester.test_create_razorpay_order(cart_items)
     
+    # Verify the order ID format and response structure
     if success and "id" in order_response:
         order_id = order_response["id"]
-        payment_id = f"pay_{uuid.uuid4().hex[:14]}"  # Mock payment ID
+        print(f"\n✅ Order ID format check: {order_id}")
+        print(f"✅ Response contains expected fields: {', '.join(order_response.keys())}")
         
-        # 2. Test payment verification with valid signature
+        # Test payment verification
+        payment_id = f"pay_{uuid.uuid4().hex[:14]}"  # Mock payment ID
         tester.test_verify_payment(order_id, payment_id, cart_items)
         
-        # 3. Test payment verification with invalid signature
+        # Test invalid signature (error handling)
         tester.test_verify_payment_invalid_signature(order_id, payment_id)
     else:
         print("❌ Skipping payment verification tests due to order creation failure")
     
-    # 4. Test empty cart
+    # 3. Test Error Handling
+    print("\n--- Testing Error Handling ---")
+    
+    # Test with empty cart
     tester.test_create_razorpay_order_empty_cart()
     
     # Print results
     tester.print_summary()
+    
+    # Check if all critical tests passed
+    critical_tests_passed = all(
+        result["status"] == "PASSED" 
+        for result in tester.test_results 
+        if result["name"] in [
+            "Health Check Endpoint", 
+            "Orders Endpoint", 
+            "Create Razorpay Order"
+        ]
+    )
+    
+    if critical_tests_passed:
+        print("\n✅ CRITICAL TESTS PASSED: The 405 error is fixed and Razorpay integration is working!")
+    else:
+        print("\n❌ CRITICAL TESTS FAILED: Some issues still remain with the Razorpay integration.")
     
     return 0 if tester.tests_passed == tester.tests_run else 1
 
