@@ -77,6 +77,14 @@ class UndhyuAPITester:
             "GET",
             "/api/"
         )
+        
+    def test_health_endpoint(self):
+        """Test the health check endpoint"""
+        return self.run_test(
+            "Health Check Endpoint",
+            "GET",
+            "/api/health"
+        )
 
     def test_products_endpoint(self, params=None):
         """Test the products endpoint with optional filters"""
@@ -120,6 +128,166 @@ class UndhyuAPITester:
             "Featured Collections",
             "GET",
             "/api/collections/featured"
+        )
+        
+    def test_orders_endpoint(self):
+        """Test the orders endpoint"""
+        return self.run_test(
+            "Orders Endpoint",
+            "GET",
+            "/api/orders"
+        )
+        
+    def test_create_razorpay_order(self, cart_items=None, customer_info=None):
+        """Test creating a Razorpay order"""
+        if cart_items is None:
+            cart_items = [
+                {
+                    "id": f"gid://shopify/Product/{uuid.uuid4()}",
+                    "title": "Test Saree",
+                    "quantity": 1,
+                    "price": 1999.00,
+                    "handle": "test-saree",
+                    "variant_id": f"gid://shopify/ProductVariant/{uuid.uuid4()}",
+                    "image_url": "https://example.com/test-saree.jpg"
+                }
+            ]
+            
+        if customer_info is None:
+            customer_info = {
+                "first_name": "Test",
+                "last_name": "Customer",
+                "email": "test@example.com",
+                "phone": "9876543210",
+                "address": "123 Test Street",
+                "city": "Test City",
+                "state": "Test State",
+                "country": "India",
+                "pincode": "123456"
+            }
+            
+        # Calculate total amount in paise
+        total_amount = int(sum(item["price"] * item["quantity"] for item in cart_items) * 100)
+        
+        data = {
+            "amount": total_amount,
+            "currency": "INR",
+            "cart": cart_items,
+            "customer_info": customer_info
+        }
+        
+        return self.run_test(
+            "Create Razorpay Order",
+            "POST",
+            "/api/create-razorpay-order",
+            params=data
+        )
+        
+    def test_verify_payment(self, order_id, payment_id, cart_items=None, customer_info=None):
+        """Test verifying a Razorpay payment"""
+        if cart_items is None:
+            cart_items = [
+                {
+                    "id": f"gid://shopify/Product/{uuid.uuid4()}",
+                    "title": "Test Saree",
+                    "quantity": 1,
+                    "price": 1999.00,
+                    "handle": "test-saree",
+                    "variant_id": f"gid://shopify/ProductVariant/{uuid.uuid4()}",
+                    "image_url": "https://example.com/test-saree.jpg"
+                }
+            ]
+            
+        if customer_info is None:
+            customer_info = {
+                "first_name": "Test",
+                "last_name": "Customer",
+                "email": "test@example.com",
+                "phone": "9876543210",
+                "address": "123 Test Street",
+                "city": "Test City",
+                "state": "Test State",
+                "country": "India",
+                "pincode": "123456"
+            }
+            
+        # Generate signature using the same algorithm as in the server
+        message = f"{order_id}|{payment_id}"
+        signature = hmac.new(
+            self.razorpay_key_secret.encode(),
+            message.encode(),
+            hashlib.sha256
+        ).hexdigest()
+        
+        data = {
+            "razorpay_order_id": order_id,
+            "razorpay_payment_id": payment_id,
+            "razorpay_signature": signature,
+            "cart": cart_items,
+            "customer_info": customer_info
+        }
+        
+        return self.run_test(
+            "Verify Razorpay Payment",
+            "POST",
+            "/api/verify-payment",
+            params=data
+        )
+        
+    def test_verify_payment_invalid_signature(self, order_id, payment_id):
+        """Test verifying a Razorpay payment with invalid signature"""
+        cart_items = [
+            {
+                "id": f"gid://shopify/Product/{uuid.uuid4()}",
+                "title": "Test Saree",
+                "quantity": 1,
+                "price": 1999.00,
+                "handle": "test-saree",
+                "variant_id": f"gid://shopify/ProductVariant/{uuid.uuid4()}",
+                "image_url": "https://example.com/test-saree.jpg"
+            }
+        ]
+        
+        customer_info = {
+            "first_name": "Test",
+            "last_name": "Customer",
+            "email": "test@example.com",
+            "phone": "9876543210"
+        }
+        
+        # Generate invalid signature
+        invalid_signature = "invalid_signature_" + uuid.uuid4().hex
+        
+        data = {
+            "razorpay_order_id": order_id,
+            "razorpay_payment_id": payment_id,
+            "razorpay_signature": invalid_signature,
+            "cart": cart_items,
+            "customer_info": customer_info
+        }
+        
+        return self.run_test(
+            "Verify Razorpay Payment with Invalid Signature",
+            "POST",
+            "/api/verify-payment",
+            expected_status=400,  # Expect 400 Bad Request
+            params=data
+        )
+        
+    def test_create_razorpay_order_empty_cart(self):
+        """Test creating a Razorpay order with empty cart"""
+        data = {
+            "amount": 0,
+            "currency": "INR",
+            "cart": [],
+            "customer_info": {}
+        }
+        
+        return self.run_test(
+            "Create Razorpay Order with Empty Cart",
+            "POST",
+            "/api/create-razorpay-order",
+            params=data
         )
 
     def print_summary(self):
