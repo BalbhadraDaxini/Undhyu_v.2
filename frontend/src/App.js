@@ -191,7 +191,7 @@ const debugLog = (message, data) => {
       return;
     }
 
-    try {
+    try { 
       // Create order
       // const orderResponse = await fetch(`${API_BASE_URL}/create-razorpay-order`, {
       //   method: 'POST',
@@ -210,7 +210,7 @@ const debugLog = (message, data) => {
       //     }))
       //   }),
       // });
-      
+        console.log{'****'}
         const orderResponse = await fetch(`${API_BASE_URL}/create-razorpay-order`, {
         method: 'POST',
         headers: {
