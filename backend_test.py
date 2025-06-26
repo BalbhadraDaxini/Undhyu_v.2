@@ -315,8 +315,9 @@ def main():
     # Setup
     tester = UndhyuAPITester()
     
-    # Test root endpoint
+    # Test root and health endpoints
     tester.test_root_endpoint()
+    tester.test_health_endpoint()
     
     # Test products endpoint with various filters
     tester.test_products_endpoint()
@@ -332,6 +333,26 @@ def main():
     tester.test_collections_endpoint()
     tester.test_collections_endpoint({"first": 5})
     tester.test_featured_collections()
+    
+    # Test orders endpoint
+    tester.test_orders_endpoint()
+    
+    # Test Razorpay integration
+    # 1. Create an order
+    success, order_response = tester.test_create_razorpay_order()
+    
+    if success and "id" in order_response:
+        order_id = order_response["id"]
+        payment_id = f"pay_{uuid.uuid4().hex[:14]}"  # Mock payment ID
+        
+        # 2. Test payment verification with valid signature
+        tester.test_verify_payment(order_id, payment_id)
+        
+        # 3. Test payment verification with invalid signature
+        tester.test_verify_payment_invalid_signature(order_id, payment_id)
+    
+    # 4. Test empty cart
+    tester.test_create_razorpay_order_empty_cart()
     
     # Print results
     tester.print_summary()
