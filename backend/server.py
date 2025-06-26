@@ -22,18 +22,8 @@ import razorpay
 import hmac
 import hashlib
 
-
-# Initialize Razorpay client
-razorpay_client = razorpay.Client(auth=(settings.RAZORPAY_KEY_ID, settings.RAZORPAY_KEY_SECRET))
-
-# Create the main app
-app = FastAPI(title="Undhyu.com API", version="1.0.0")
-
-# Create a router with the /api prefix
-api_router = APIRouter(prefix="/api")
-
 # Add this after your existing settings
-#razorpay_client = razorpay.Client(auth=(settings.RAZORPAY_KEY_ID, settings.RAZORPAY_KEY_SECRET))
+razorpay_client = razorpay.Client(auth=(settings.RAZORPAY_KEY_ID, settings.RAZORPAY_KEY_SECRET))
 
 # Add these models after your existing models
 class CartItem(BaseModel):
@@ -54,21 +44,43 @@ class VerifyPaymentRequest(BaseModel):
     razorpay_signature: str
     cart: List[CartItem]
 
-@app.post("/api/create-razorpay-order")
-async def create_razorpay_order(request: Request):
+# Add these endpoints after your existing endpoints
+@api_router.post("/create-razorpay-order")
+async def create_razorpay_order(request: CreateOrderRequest):
+    """Create Razorpay order for payment"""
     try:
-        data = await request.json()
-        amount = int(data.get("amount"))
-        currency = data.get("currency", "INR")
-        order = razorpay_client.order.create({
-            "amount": amount,
-            "currency": currency,
-            "receipt": f"receipt_{os.urandom(4).hex()}"
-        })
-        return order
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        # Create order in Razorpay
+        order_data = {
+            "amount": request.amount,
+            "currency": request.currency,
+            "receipt": f"order_{uuid.uuid4()}",
+            "payment_capture": 1
+        }
         
+        razorpay_order = razorpay_client.order.create(data=order_data)
+        
+        # Store order in database
+        if db:
+            order_record = {
+                "razorpay_order_id": razorpay_order["id"],
+                "amount": request.amount,
+                "currency": request.currency,
+                "cart": [item.dict() for item in request.cart],
+                "status": "created",
+                "created_at": datetime.utcnow()
+            }
+            await db.orders.insert_one(order_record)
+        
+        return {
+            "id": razorpay_order["id"],
+            "amount": razorpay_order["amount"],
+            "currency": razorpay_order["currency"],
+            "status": razorpay_order["status"]
+        }
+        
+    except Exception as e:
+        print(f"Razorpay order creation error: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to create order: {str(e)}")
 
 @api_router.post("/verify-payment")
 async def verify_payment(request: VerifyPaymentRequest):
@@ -168,7 +180,14 @@ except Exception as e:
     client = None
     db = None
 
+# Initialize Razorpay client
+razorpay_client = razorpay.Client(auth=(settings.RAZORPAY_KEY_ID, settings.RAZORPAY_KEY_SECRET))
 
+# Create the main app
+app = FastAPI(title="Undhyu.com API", version="1.0.0")
+
+# Create a router with the /api prefix
+api_router = APIRouter(prefix="/api")
 
 # Pydantic Models
 class StatusCheck(BaseModel):
