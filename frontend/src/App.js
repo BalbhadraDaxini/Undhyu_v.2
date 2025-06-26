@@ -259,7 +259,7 @@ function App() {
           ondismiss: function(){
             console.log('Payment cancelled');
           }
-        };
+        },
       };
 
       const rzp = new window.Razorpay(options);
