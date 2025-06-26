@@ -99,6 +99,7 @@ function App() {
   const loadProducts = async (loadMore = false) => {
     setLoading(true);
     try {
+      console.log('Loading products from:', `${API_BASE_URL}/api/products`);
       const params = {
         first: 24, // Match Soch's 24 items per page
         collection_handle: selectedCollection || undefined,
@@ -108,8 +109,10 @@ function App() {
         min_price: priceRange.min || undefined,
         max_price: priceRange.max || undefined,
       };
+      console.log('Products API params:', params);
 
       const response = await axios.get(`${API_BASE_URL}/api/products`, { params });
+      console.log('Products response:', response.data);
       
       if (loadMore) {
         setProducts(prev => [...prev, ...response.data.products]);
@@ -121,6 +124,7 @@ function App() {
       setEndCursor(response.data.pageInfo.endCursor);
     } catch (error) {
       console.error('Error loading products:', error);
+      console.error('Error details:', error.response?.data || error.message);
     } finally {
       setLoading(false);
     }
