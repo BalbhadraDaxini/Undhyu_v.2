@@ -8,7 +8,7 @@ import uuid
 from datetime import datetime
 
 class UndhyuAPITester:
-    def __init__(self, base_url="https://7a93d17b-e192-4382-9350-73b0bd81f98b.preview.emergentagent.com"):
+    def __init__(self, base_url="https://d2a7b3a3-ad7c-4560-bca6-c8874481d6c0.preview.emergentagent.com"):
         self.base_url = base_url
         self.tests_run = 0
         self.tests_passed = 0

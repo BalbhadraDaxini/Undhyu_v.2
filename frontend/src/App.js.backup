@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import axios from 'axios';
 import './App.css';
 
-const API_BASE_URL = process.env.REACT_APP_BACKEND_URL || 'https://7a93d17b-e192-4382-9350-73b0bd81f98b.preview.emergentagent.com';
+const API_BASE_URL = process.env.REACT_APP_BACKEND_URL || 'https://d2a7b3a3-ad7c-4560-bca6-c8874481d6c0.preview.emergentagent.com';
 
 function App() {
   const [products, setProducts] = useState([]);

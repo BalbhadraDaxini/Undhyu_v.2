@@ -770,7 +770,7 @@ app.add_middleware(
         "https://www.undhyu.com", 
         "https://*.vercel.app",
         "https://*.emergentagent.com",
-        "https://fashion-bazaar-3.preview.emergentagent.com",
+        "https://d2a7b3a3-ad7c-4560-bca6-c8874481d6c0.preview.emergentagent.com",
         "http://localhost:3000",
         "http://localhost:3001"
     ],
