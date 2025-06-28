@@ -823,7 +823,7 @@ function App() {
         </div>
       </div>
     );
-  }
+  };
 
   const CollectionFilter = () => {
     return (
