@@ -695,7 +695,7 @@ function App() {
         </div>
       </div>
     );
-  }
+  };
 
   const FeaturedCollections = () => {
     const featuredImages = [
