@@ -174,6 +174,10 @@ const HomePage = () => {
             <p className="text-xl text-gray-600 max-w-2xl mx-auto">
               Latest additions to our collection - fresh styles for the modern woman
             </p>
+            {/* Debug info */}
+            <div className="mt-4 text-sm text-gray-500">
+              Debug: Loading: {loading.toString()}, New Arrivals: {newArrivals.length}, Featured: {featuredProducts.length}
+            </div>
           </div>
 
           {loading ? (
