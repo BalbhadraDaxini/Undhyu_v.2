@@ -315,25 +315,67 @@ def main():
     # Setup
     tester = UndhyuAPITester()
     
-    print("\n=== TESTING FIXED RAZORPAY INTEGRATION ===")
+    print("\n=== TESTING UNDHYU E-COMMERCE APPLICATION ===")
     print("Testing areas mentioned in the review request:")
-    print("1. Backend API Endpoints")
-    print("2. Razorpay Integration")
-    print("3. Error Handling")
+    print("1. Shopify Products API")
+    print("2. Shopify Collections API")
+    print("3. Health Check Endpoint")
+    print("4. Razorpay Order Creation")
+    print("5. Environment Variables and Configuration")
     
     # 1. Test Backend API Endpoints
     print("\n--- Testing Backend API Endpoints ---")
     
-    # Test health endpoint - Should show all services configured
-    tester.test_health_endpoint()
+    # Test root endpoint
+    tester.test_root_endpoint()
     
-    # Test orders endpoint - Should return empty array (no more 500 errors)
+    # Test health endpoint - Should show all services configured
+    success, health_response = tester.test_health_endpoint()
+    
+    # Verify environment variables and configuration
+    if success:
+        print("\n--- Checking Environment Variables and Configuration ---")
+        if "shopify_configured" in health_response:
+            print(f"✅ Shopify Storefront API: {'Configured' if health_response['shopify_configured'] else 'Not Configured'}")
+        if "shopify_admin_configured" in health_response:
+            print(f"✅ Shopify Admin API: {'Configured' if health_response['shopify_admin_configured'] else 'Not Configured'}")
+        if "razorpay_configured" in health_response:
+            print(f"✅ Razorpay: {'Configured' if health_response['razorpay_configured'] else 'Not Configured'}")
+        if "mongodb_connected" in health_response:
+            print(f"✅ MongoDB: {'Connected' if health_response['mongodb_connected'] else 'Not Connected'}")
+    
+    # Test products endpoint with limit
+    print("\n--- Testing Shopify Products API ---")
+    success, products_response = tester.test_products_endpoint({"first": 5})
+    
+    # Check if we got products and try to test a specific product
+    if success and "products" in products_response and len(products_response["products"]) > 0:
+        # Get the first product handle
+        first_product = products_response["products"][0]
+        if "handle" in first_product:
+            product_handle = first_product["handle"]
+            print(f"\n✅ Found product with handle: {product_handle}")
+            
+            # Test getting a specific product
+            tester.test_product_by_handle(product_handle)
+        else:
+            print("❌ Product handle not found in response")
+    else:
+        print("❌ No products found or API call failed")
+        # Test with a test product handle as fallback
+        tester.test_product_by_handle("test-product")
+    
+    # Test collections endpoint
+    print("\n--- Testing Shopify Collections API ---")
+    tester.test_collections_endpoint()
+    
+    # Test featured collections
+    tester.test_featured_collections()
+    
+    # Test orders endpoint
     tester.test_orders_endpoint()
     
-    # Test products endpoint - Should still work for Shopify integration
-    tester.test_products_endpoint()
-    
-    # 2. Test Razorpay Integration
+    # Test Razorpay Integration
     print("\n--- Testing Razorpay Integration ---")
     
     # Create a valid order with proper cart data
@@ -367,30 +409,42 @@ def main():
     else:
         print("❌ Skipping payment verification tests due to order creation failure")
     
-    # 3. Test Error Handling
+    # Test Error Handling
     print("\n--- Testing Error Handling ---")
     
     # Test with empty cart
     tester.test_create_razorpay_order_empty_cart()
     
+    # Test non-existent product
+    tester.test_product_by_handle("non-existent-product-handle-12345", expected_status=404)
+    
     # Print results
     tester.print_summary()
     
     # Check if all critical tests passed
+    critical_tests = [
+        "Health Check Endpoint", 
+        "Products Endpoint with filters (first=5)", 
+        "Collections Endpoint",
+        "Create Razorpay Order"
+    ]
+    
     critical_tests_passed = all(
         result["status"] == "PASSED" 
         for result in tester.test_results 
-        if result["name"] in [
-            "Health Check Endpoint", 
-            "Orders Endpoint", 
-            "Create Razorpay Order"
-        ]
+        if result["name"] in critical_tests
     )
     
     if critical_tests_passed:
-        print("\n✅ CRITICAL TESTS PASSED: The 405 error is fixed and Razorpay integration is working!")
+        print("\n✅ CRITICAL TESTS PASSED: The Undhyu e-commerce application is working correctly!")
     else:
-        print("\n❌ CRITICAL TESTS FAILED: Some issues still remain with the Razorpay integration.")
+        print("\n❌ CRITICAL TESTS FAILED: Some issues remain with the Undhyu e-commerce application.")
+        # List failed critical tests
+        failed_tests = [
+            result["name"] for result in tester.test_results 
+            if result["name"] in critical_tests and result["status"] != "PASSED"
+        ]
+        print(f"Failed critical tests: {', '.join(failed_tests)}")
     
     return 0 if tester.tests_passed == tester.tests_run else 1
 
