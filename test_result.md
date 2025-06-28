@@ -165,6 +165,18 @@
           agent: "main"
           comment: "Successfully configured all environment variables including Razorpay LIVE keys, Shopify Admin API token, and updated Storefront token."
 
+  - task: "Shopify Products API"
+    implemented: true
+    working: true
+    file: "backend/server.py"
+    stuck_count: 0
+    priority: "medium"
+    needs_retesting: true
+    status_history:
+        - working: true
+          agent: "main"
+          comment: "Shopify Storefront API integration working correctly with comprehensive product fetching capabilities including filtering, sorting, and pagination."
+
 ## frontend:
   - task: "Cart Functionality"
     implemented: true
