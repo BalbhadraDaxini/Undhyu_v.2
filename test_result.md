@@ -102,7 +102,7 @@
 # Testing Data - Main Agent and testing sub agent both should log testing data below this section
 #====================================================================================================
 
-## user_problem_statement: "Undhyu.com e-commerce website for female apparel with Shopify integration is experiencing cart checkout failures via Razorpay payment gateway. The 405 error occurs when attempting to create Razorpay orders, while individual product purchases work but show static payment screens. Need to fix payment integration while preserving original UI design."
+## user_problem_statement: "Create a completely restructured UI/UX for Undhyu.com e-commerce website with new homepage layout (Header with sticky navigation, Hero section, Collections section, New Arrivals section, Uniqueness Highlight section) and dedicated category pages with left sidebar filters and right product grid. Implement React Router navigation, maintain existing Shopify/Razorpay integrations, and ensure responsive design."
 
 ## backend:
   - task: "Razorpay Order Creation API"
