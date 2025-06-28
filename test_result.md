@@ -270,10 +270,13 @@
 
 ## test_plan:
   current_focus:
-    - "Razorpay Order Creation API"
-    - "Razorpay Payment Verification API"
-    - "Cart Functionality"
-    - "Environment Configuration"
+    - "Shopify Products API"
+    - "Homepage UI Restructure"
+    - "React Router Navigation"
+    - "Category Pages with Filters"
+    - "Product Cards with Actions"
+    - "Cart Management System"
+    - "Payment Integration"
   stuck_tasks: []
   test_all: false
   test_priority: "high_first"
