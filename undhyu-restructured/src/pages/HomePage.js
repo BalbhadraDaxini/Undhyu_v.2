@@ -33,6 +33,45 @@ const HomePage = () => {
     setLoading(true);
     console.log('Loading homepage data...');
     
+    // Temporarily use static test data to see if UI works
+    const testProduct = {
+      id: "test-1",
+      title: "Test Saree",
+      handle: "test-saree",
+      description: "Test description",
+      vendor: "Test Vendor",
+      images: {
+        edges: [{
+          node: {
+            url: "https://images.unsplash.com/photo-1617627143750-d86bc21e42bb",
+            altText: "Test Saree"
+          }
+        }]
+      },
+      variants: {
+        edges: [{
+          node: {
+            id: "test-variant-1",
+            price: {
+              amount: "1999.0",
+              currencyCode: "INR"
+            },
+            availableForSale: true
+          }
+        }]
+      }
+    };
+
+    setTimeout(() => {
+      console.log('Setting test data...');
+      setFeaturedProducts([testProduct]);
+      setNewArrivals([testProduct, testProduct]);
+      setCollections(FEATURED_COLLECTIONS);
+      setLoading(false);
+      console.log('Test data set, loading false');
+    }, 2000);
+
+    /* 
     try {
       // Load featured products and new arrivals separately to avoid Promise.all failure
       console.log('Loading featured products...');
@@ -76,6 +115,7 @@ const HomePage = () => {
       setLoading(false);
       console.log('Homepage data loading completed');
     }
+    */
   };
 
   return (
