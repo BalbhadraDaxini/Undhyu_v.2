@@ -844,7 +844,7 @@ function App() {
         ))}
       </div>
     );
-  }
+  };
 
   const HeroSection = () => {
     return (
