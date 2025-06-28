@@ -100,12 +100,13 @@ class UndhyuAPITester:
             params=params
         )
 
-    def test_product_by_handle(self, handle):
+    def test_product_by_handle(self, handle, expected_status=200):
         """Test getting a specific product by handle"""
         return self.run_test(
             f"Product by Handle ({handle})",
             "GET",
-            f"/api/products/{handle}"
+            f"/api/products/{handle}",
+            expected_status=expected_status
         )
 
     def test_collections_endpoint(self, params=None):
