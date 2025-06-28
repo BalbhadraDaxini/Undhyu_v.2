@@ -899,7 +899,7 @@ function App() {
         </div>
       </div>
     );
-  }
+  };
 
   const ProductsView = () => {
     return (
