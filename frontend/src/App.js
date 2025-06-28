@@ -997,7 +997,7 @@ function App() {
         )}
       </div>
     );
-  }
+  };
 
   return (
     <div className="App min-h-screen bg-white">
