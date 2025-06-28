@@ -747,7 +747,7 @@ function App() {
         </div>
       </div>
     );
-  }
+  };
 
   const FeaturedProducts = () => {
     const [featuredProducts, setFeaturedProducts] = useState([]);
