@@ -31,22 +31,38 @@ const HomePage = () => {
 
   const loadHomePageData = async () => {
     setLoading(true);
+    console.log('Loading homepage data...');
+    
     try {
-      // Load featured products and new arrivals
-      const [featuredResponse, newArrivalsResponse] = await Promise.all([
-        getProducts({ first: 8, sort_key: 'BEST_SELLING' }),
-        getProducts({ first: 8, sort_key: 'CREATED_AT', reverse: true })
-      ]);
+      // Load featured products and new arrivals separately to avoid Promise.all failure
+      console.log('Loading featured products...');
+      try {
+        const featuredResponse = await getProducts({ first: 8, sort_key: 'BEST_SELLING' });
+        console.log('Featured products loaded:', featuredResponse.products?.length || 0);
+        setFeaturedProducts(featuredResponse.products || []);
+      } catch (error) {
+        console.error('Error loading featured products:', error);
+        setFeaturedProducts([]);
+      }
 
-      setFeaturedProducts(featuredResponse.products || []);
-      setNewArrivals(newArrivalsResponse.products || []);
+      console.log('Loading new arrivals...');
+      try {
+        const newArrivalsResponse = await getProducts({ first: 8, sort_key: 'CREATED_AT', reverse: true });
+        console.log('New arrivals loaded:', newArrivalsResponse.products?.length || 0);
+        setNewArrivals(newArrivalsResponse.products || []);
+      } catch (error) {
+        console.error('Error loading new arrivals:', error);
+        setNewArrivals([]);
+      }
 
       // Try to load collections, fallback to static data
+      console.log('Loading collections...');
       try {
         const collectionsResponse = await getFeaturedCollections();
+        console.log('Collections loaded:', collectionsResponse.collections?.length || 0);
         setCollections(collectionsResponse.collections || FEATURED_COLLECTIONS);
       } catch (error) {
-        console.log('Using fallback collections data');
+        console.log('Using fallback collections data due to error:', error.message);
         setCollections(FEATURED_COLLECTIONS);
       }
 
@@ -54,8 +70,11 @@ const HomePage = () => {
       console.error('Error loading homepage data:', error);
       // Use fallback data
       setCollections(FEATURED_COLLECTIONS);
+      setFeaturedProducts([]);
+      setNewArrivals([]);
     } finally {
       setLoading(false);
+      console.log('Homepage data loading completed');
     }
   };
 
