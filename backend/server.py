@@ -733,12 +733,45 @@ async def get_featured_collections():
     
     for handle in featured_handles:
         try:
-            collection = await get_collection_by_handle(handle)
-            collections.append(collection)
-        except HTTPException as e:
-            if e.status_code == 404:
-                # Collection doesn't exist, skip it
-                continue
+            # Use the GraphQL query directly instead of calling the route handler
+            graphql_query = """
+            query getCollection($handle: String!) {
+                collectionByHandle(handle: $handle) {
+                    id
+                    title
+                    handle
+                    description
+                    descriptionHtml
+                    image {
+                        id
+                        url
+                        altText
+                        width
+                        height
+                    }
+                    products(first: 1) {
+                        edges {
+                            node {
+                                id
+                            }
+                        }
+                    }
+                    updatedAt
+                }
+            }
+            """
+            
+            variables = {"handle": handle}
+            
+            result = await shopify_storefront_client.execute_query(graphql_query, variables)
+            
+            if "errors" not in result and result["data"]["collectionByHandle"]:
+                collection = result["data"]["collectionByHandle"]
+                collections.append(collection)
+                
+        except Exception as e:
+            logger.warning(f"Failed to fetch collection {handle}: {str(e)}")
+            continue
     
     return {"collections": collections}
 
